@@ -75,6 +75,39 @@ The pretend phone has no real bank messages, so turn on sample data:
 
 ---
 
+## Run it on your own Android phone (for the class demo)
+
+Use this to show the app on a real phone. You connect the phone to your laptop
+with a cable, and Android Studio puts the app on it.
+
+**One time, on the phone:**
+
+1. Open **Settings → About phone**. Tap **Build number** 7 times. You'll see
+   "You are now a developer". (On some phones it is under **Software information**.)
+2. Go back to **Settings → System → Developer options** and turn on **USB debugging**.
+   (If you can't find it, search "Developer options" in Settings.)
+
+**Every time:**
+
+1. Plug the phone into your laptop with a USB cable (USB-C to USB-C, or USB-C to
+   USB-A). It must be a **data cable**. Some cheap cables only charge.
+2. On the phone, a pop-up asks **"Allow USB debugging?"**. Tick **Always allow**
+   and tap **Allow**.
+3. In Android Studio, pick your phone in the device box at the top (it shows the
+   phone's name). Click **▶ Run**. The app opens on your phone.
+
+**While it runs:** open **View → Tool Windows → Logcat** in Android Studio to see
+what the app is doing, step by step. Useful when something looks wrong.
+
+**No cable?** Phone and laptop on the same Wi-Fi, Android 11 or newer: turn on
+**Wireless debugging** in Developer options, then in Android Studio open
+**Device Manager → Pair devices using Wi-Fi** and scan the QR code with the phone.
+
+**Before you show it in class:** your real bank messages will appear in the app.
+Tap the bubble to turn **Sample on** so everyone sees made-up payments instead.
+
+---
+
 ## Getting the latest changes
 
 When the team pushes new code, update your copy:
@@ -117,6 +150,8 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | Red errors right after opening the project | Wait for the progress bar to finish, then **File → Sync Project with Gradle Files**. |
 | "SDK not found" or "SDK 37 missing" | Click the **Install** link in the error, or open **Tools → SDK Manager** and tick the newest Android version. |
 | The ▶ button is grey | Pick your pretend phone in the device box at the top. |
+| My real phone doesn't show up | Try another cable or USB port, unlock the phone, and check for the "Allow USB debugging?" pop-up. On the phone, set USB mode to **File transfer**. |
+| On the phone, switches for notification access are greyed out | Settings → Apps → Expense Tracker → ⋮ (top right) → **Allow restricted settings**. |
 | The pretend phone is very slow | Close other apps. Give it a minute after it first starts. |
 | Install fails with "version downgrade" | On the pretend phone, uninstall the app (press and hold its icon → Uninstall) and click ▶ again. |
 
