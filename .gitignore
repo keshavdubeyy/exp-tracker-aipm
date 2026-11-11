@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+build/
+local.properties
+.kotlin/
+.vscode/
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Never commit real SMS data (see AGENTS.md rule 3)
+*.sms
+sms-export*
+real-sms*
