@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Expense Tracker</string>
+    <string name="gpay_accessibility_description">Reads only Google Pay\'s \"payment successful\" screen, so small payments that get no bank SMS still show up. It ignores every other app, and nothing leaves your phone.</string>
+</resources>

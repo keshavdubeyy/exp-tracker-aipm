@@ -1,0 +1,16 @@
+<resources>
+    <!-- Light system theme. Window background matches LightColors.bg, so there's no flash at launch. -->
+    <style name="Theme.ExpenseTracker" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F4F4F6</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Android 12+ system splash: app mark centred on the window background, then the app theme. -->
+    <style name="Theme.ExpenseTracker.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F4F4F6</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenIconBackgroundColor">#98BBF4</item>
+        <item name="postSplashScreenTheme">@style/Theme.ExpenseTracker</item>
+    </style>
+</resources>
