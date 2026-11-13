@@ -80,9 +80,10 @@ object CategoryPrompt {
         ensureChannels(context)
         val id = 20_000 + (paymentKey.hashCode() and 0x7fffffff) % 9_000
         val amount = Money.formatWhole(facts.paise)
-        val best = guess.suggestions.first()
+        // Not sure (three tiers): ask with no guess. An instruction-like payee has no suggestions at all.
+        val best = guess.suggestions.firstOrNull()?.takeIf { guess.confidence != com.yourteam.expensetracker.categoriser.Confidence.LOW }
         val title = facts.payee?.let { "$amount paid to $it" } ?: "$amount paid"
-        val text = "What was it for? Looks like $best." + (facts.payee?.let { " We'll remember it for $it." } ?: "")
+        val text = "What was it for?" + (best?.let { " Looks like $it." } ?: "") + (facts.payee?.let { " We'll remember it for $it." } ?: "")
         val builder = NotificationCompat.Builder(context, CHANNEL_ASK)
             .setSmallIcon(R.drawable.ic_stat_payment)
             .setContentTitle(title)
@@ -91,14 +92,14 @@ object CategoryPrompt {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-        listOf(best to best, guess.suggestions.getOrNull(1).let { it to it }).forEachIndexed { i, (label, category) ->
+        listOf(best to best, guess.suggestions.getOrNull(1)?.takeIf { best != null }.let { it to it }).forEachIndexed { i, (label, category) ->
             if (label == null || category == null) return@forEachIndexed
             val intent = Intent(context, CategoryActionReceiver::class.java).setAction(ACTION_PICK)
                 .putExtra(EXTRA_KEY, paymentKey).putExtra(EXTRA_PAYEE, facts.payee).putExtra(EXTRA_VPA, facts.vpa)
                 .putExtra(EXTRA_CATEGORY, category).putExtra(EXTRA_NOTIFICATION, id)
             builder.addAction(0, label, PendingIntent.getBroadcast(context, id * 4 + i, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         }
-        builder.addAction(0, "Other", openReview(context, id * 4 + 3))
+        builder.addAction(0, if (best == null) "Choose" else "Other", openReview(context, id * 4 + 3))
         @Suppress("MissingPermission") // checked in canNotify()
         NotificationManagerCompat.from(context).notify(id, builder.build())
         markAsked(context, fingerprint) // only once it's really been shown

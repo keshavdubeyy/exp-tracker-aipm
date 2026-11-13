@@ -74,7 +74,9 @@ object AiCategoriser {
             val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             val list = json.getJSONArray("suggestions").let { a -> (0 until a.length()).map(a::getString) }
                 .filter { it in req.categories }.distinct().take(3)
-            if (list.isEmpty()) null else AiHint(list, json.optBoolean("confident", false))
+            // An empty list is a real answer ("can't tell from the name"): saved, so the payee isn't asked again
+            // and a weak shop word can't take over (golden eval #5, CAT-008). Only a failure returns null.
+            AiHint(list, list.isNotEmpty() && json.optBoolean("confident", false))
         }.also { conn.disconnect() }
     } catch (e: Exception) {
         // Error type only: never log the request, it holds a payee name (AGENTS.md rule 3 spirit).

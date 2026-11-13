@@ -439,7 +439,7 @@ class PaymentRepository private constructor(private val context: Context) {
 
     private fun loadAiHints(): Map<String, AiHint> = aiPrefs.all.mapNotNull { (k, v) ->
         val parts = (v as? String)?.split('|') ?: return@mapNotNull null
-        if (parts.size < 2) return@mapNotNull null
+        if (parts.last() !in setOf("0", "1")) return@mapNotNull null // "0" alone = the AI answered "can't tell"
         k to AiHint(parts.dropLast(1), parts.last() == "1")
     }.toMap()
 

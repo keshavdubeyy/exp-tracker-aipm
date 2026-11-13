@@ -39,7 +39,8 @@ class GoldenF1AppLayerTest {
             val mustConfirm = c[9] == "1"
 
             // The app only uses an AI answer it would actually have asked for (named payee, money out).
-            val ai = if (sent && aiPicks.isNotEmpty()) AiHint(aiPicks, confident) else null
+            // An empty list from the AI is an answer ("can't tell"), not a missing one.
+            val ai = if (sent) AiHint(aiPicks, confident && aiPicks.isNotEmpty()) else null
             val g = Categoriser.guess(PaymentFacts(payee, vpa, paise, method = "UPI"), ai)
             val outcome = when {
                 g.category != null -> "filed on its own"
