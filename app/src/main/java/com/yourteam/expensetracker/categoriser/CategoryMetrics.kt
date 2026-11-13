@@ -120,11 +120,8 @@ object CategoryMetrics {
         val aiPicked = picked.filter { it.pickBasis == Basis.AI }
         return listOf(
             Metric("AI suggestion hit rate", "When the AI made the guesses, picks that were one of its top 3", pct(aiPicked.count { it.pickedRank in 1..3 }, aiPicked.size), aiPicked.size, "≥ 80%"),
-            Metric("AI first-guess rate", "When the AI made the guesses, picks that were its first guess", pct(aiPicked.count { it.pickedRank == 1 }, aiPicked.size), aiPicked.size, "≥ 50%"),
+            Metric("AI first pick accepted", "When the AI's guesses were shown, picks that were its first suggestion", pct(aiPicked.count { it.pickedRank == 1 }, aiPicked.size), aiPicked.size, "≥ 50%"),
             Metric("Categorisation accuracy", "Automatic categories the user kept", pct(auto.size - corrected, auto.size), auto.size, "≥ 85%"),
-            auto.filter { it.firstBasis == Basis.AI }.let { ai ->
-                Metric("AI categories kept", "Categories the AI filed on its own that the user never changed", pct(ai.count { !it.corrected }, ai.size), ai.size, "≥ 85%")
-            },
             Metric("Auto-categorisation rate", "Payments categorised without the user", pct(auto.size, all), all, "Higher is better"),
             Metric("User correction rate", "Automatic categories the user changed", pct(corrected, auto.size), auto.size, "≤ 15%"),
             Metric("Merchant learning rate", "Repeat payees placed right from the user's past choice", pct(learned.count { !it.corrected }, learned.size), learned.size, "≥ 95%"),

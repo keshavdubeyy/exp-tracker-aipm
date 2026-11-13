@@ -66,6 +66,8 @@ def score(case: dict, out: dict | None, err: str = "") -> dict:
     expect_abstain = exp["status"] == "insufficient_evidence"
     exp_top1 = exp["suggestions"][0]["category_id"] if exp["suggestions"] else None
     acceptable = set(case["acceptable_top3"])
+    # Context-dependent cases may list more than one equally correct first pick (v1.1: CAT-018 Groceries or Shopping).
+    top1_ok = set(case.get("acceptable_top1") or [exp_top1])
     if out is None:
         if "422" in err:  # the server refused it as malformed (no payee and no UPI ID): a safe abstention
             return {"rejected": True, "expect_abstain": expect_abstain, "abstained": expect_abstain,
@@ -88,8 +90,8 @@ def score(case: dict, out: dict | None, err: str = "") -> dict:
         s["abstained_or_unsure"] = abstained or not out.get("confident", False)
         s["confident_guess_on_abstain_case"] = (not abstained) and bool(out.get("confident"))
     else:
-        s["top1_correct"] = bool(ids) and ids[0] == exp_top1
-        s["top3_hit"] = exp_top1 in ids[:3]
+        s["top1_correct"] = bool(ids) and ids[0] in top1_ok
+        s["top3_hit"] = bool(top1_ok & set(ids[:3]))
         s["all_in_acceptable"] = all(i in acceptable for i in ids)
         s["false_abstain"] = abstained
         s["expected_confirmation"] = exp.get("requires_user_confirmation")

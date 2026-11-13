@@ -109,14 +109,17 @@ def main() -> None:
             filed += 1
             filed_right += a["filed"] == exp_top1
 
+        # Every abstain case counts, critical or not: a case filed on an abstain case is exactly the failure this
+        # metric must show (golden eval fix #9: CAT-020 was skipped, so 10/11 read as 10/10 = 100%).
+        if expect_abstain:
+            abstain_n += 1
+            abstain_ok += not a.get("filed")
+
         why = ""
         if a.get("critical"):
             result, why = "Critical", a["critical"] + f" (app rule: {a.get('basis', '')}, score {a.get('score', '')})"
             crit += 1
         elif expect_abstain:
-            abstain_n += 1
-            if not a.get("filed"):
-                abstain_ok += 1
             if a.get("app_outcome") == "asked, no guess":
                 result = "Pass"
             else:

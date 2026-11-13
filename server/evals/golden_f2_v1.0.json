@@ -1,5 +1,5 @@
 {
- "dataset_version": "Golden Dataset v1.0 (draft, labels pending approval)",
+ "dataset_version": "Golden Dataset v1.1 (draft, labels pending approval)",
  "feature": "F2 Insights",
  "cases": [
   {
@@ -617,13 +617,18 @@
     ]
    },
    "expected": {
-    "status": "generate_explanation",
-    "title": "Short factual title consistent with the approved candidate",
-    "explanation": "Application reuses/updates or suppresses unchanged insight; do not show duplicate card.",
-    "required_facts": [
-     "Application reuses/updates or suppresses unchanged insight; do not show duplicate card."
+    "status": "reuse_existing",
+    "insight_id": "PAT-001-v17",
+    "title": null,
+    "explanation": null,
+    "app_layer_checks": [
+     "ai_not_called",
+     "same_insight_id_returned",
+     "no_new_card"
     ],
-    "must_not_include": "Do not create identical repeated insight without material data change."
+    "required_facts": [],
+    "must_not_include": "Do not create identical repeated insight without material data change.",
+    "notes": "v1.1 (13 Nov 2026, team decision): was status generate_explanation with a behaviour description as the 'explanation'. An unchanged insight is not something to word again: the app keeps the stored card. New status reuse_existing (not no_insight, which means 'no pattern' and could hide the existing card). Scored at the app layer: pass only if the AI was not called, the stored insight id (fingerprint) is returned, and no new card is created."
    },
    "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
    "prohibited": "Do not create identical repeated insight without material data change.",

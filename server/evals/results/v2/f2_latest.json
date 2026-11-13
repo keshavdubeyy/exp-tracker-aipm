@@ -1,0 +1,468 @@
+{
+ "run_id": "F2-20261113-2347",
+ "run_date": "2026-11-13",
+ "dataset_version": "Golden Dataset v1.1 (draft, labels pending approval)",
+ "feature": "F2 Insights",
+ "model": "claude-haiku-5-5 · judge claude-opus-5-5",
+ "prompt_version": "e-3abb13ae",
+ "app_commit": "519bcf0+local",
+ "summary": {
+  "cases": 15,
+  "status": 100.0,
+  "facts": 90.0,
+  "grounded": 100.0,
+  "unsupported": 0.0,
+  "evidence": 100.0,
+  "clarity": 4,
+  "critical": 0,
+  "median_ms": 1670
+ },
+ "cases": [
+  {
+   "id": "INS-001",
+   "scenario": "Category increase",
+   "expected": "generate explanation: Food spending was ₹6,000 in October versus ₹4,000 in September, a 50% increase.",
+   "critical": "",
+   "facts": "Type: category_comparison | Metrics: food_current_inr = 6,000 · food_previous_inr = 4,000 · change_percent = 50 | Period: October 2026 vs September 2026 | Pattern: PAT-001 \"Food spending increased month-on-month\" | Evidence: TX-101, TX-102",
+   "cited": "Keys: food_current_inr, food_previous_inr, change_percent | Refs: TX-101, TX-102 | Numbers in text: 50, 4,000, 6,000, 50",
+   "ai": "generate explanation: Food spending up 50% month-on-month — Food spending rose from ₹4,000 in September 2026 to ₹6,000 in October 2026, a 50% increase.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-002",
+   "scenario": "Category decrease",
+   "expected": "generate explanation: Travel spending decreased from ₹3,000 to ₹1,800, a 40% decrease.",
+   "critical": "",
+   "facts": "Type: category_comparison | Metrics: travel_current_inr = 1,800 · travel_previous_inr = 3,000 · change_percent = -40 | Period: October 2026 vs September 2026 | Pattern: PAT-002 \"Travel spending decreased month-on-month\" | Evidence: TX-201, TX-202",
+   "cited": "Keys: travel_current_inr, travel_previous_inr, change_percent | Refs: TX-201, TX-202 | Numbers in text: 1,800, 40, 3,000",
+   "ai": "generate explanation: Travel spending down month-on-month — Travel spending was ₹1,800 in October 2026, down 40% from ₹3,000 in September 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-003",
+   "scenario": "Category share",
+   "expected": "generate explanation: Groceries account for ₹3,600, or 30% of total spending of ₹12,000.",
+   "critical": "",
+   "facts": "Type: category_share | Metrics: total_spend_inr = 12,000 · groceries_spend_inr = 3,600 · groceries_share_percent = 30 | Period: October 2026 | Pattern: PAT-003 \"Groceries are 30% of spending\" | Evidence: TX-301, TX-302",
+   "cited": "Keys: total_spend_inr, groceries_spend_inr, groceries_share_percent | Refs: TX-301, TX-302 | Numbers in text: 30, 3,600, 12,000, 30",
+   "ai": "generate explanation: Groceries are 30% of spending — In October 2026, groceries came to ₹3,600 of ₹12,000 total spending, which is 30%.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-004",
+   "scenario": "Top category",
+   "expected": "generate explanation: Food & Dining is highest among the listed categories at ₹5,000.",
+   "critical": "",
+   "facts": "Type: top_category | Metrics: food_spend_inr = 5,000 · travel_spend_inr = 2,500 · shopping_spend_inr = 1,800 · total_spend_inr = 11,000 (not citable) | Period: October 2026 | Pattern: PAT-004 \"Food is highest among listed categories\" | Evidence: TX-401",
+   "cited": "Keys: food_spend_inr, travel_spend_inr, shopping_spend_inr | Refs: TX-401 | Numbers in text: 5,000, 2,500, 1,800",
+   "ai": "generate explanation: Food highest among listed categories — In October 2026, food spend of ₹5,000 was higher than travel spend of ₹2,500 and shopping spend of ₹1,800 among the listed categories.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-005",
+   "scenario": "Total comparison",
+   "expected": "generate explanation: Total spending rose from ₹12,500 to ₹15,000, an increase of ₹2,500 or 20%.",
+   "critical": "",
+   "facts": "Type: period_comparison | Metrics: current_total_inr = 15,000 · previous_total_inr = 12,500 · absolute_change_inr = 2,500 · change_percent = 20 | Period: October 2026 vs September 2026 | Pattern: PAT-005 \"Total spending increased 20%\" | Evidence: TX-501, TX-502",
+   "cited": "Keys: current_total_inr, previous_total_inr, change_percent | Refs: TX-501, TX-502 | Numbers in text: 20, 15,000, 20, 12,500",
+   "ai": "generate explanation: Total spending up 20% from September — Total spending in October 2026 was ₹15,000, up 20% from ₹12,500 in September 2026.",
+   "app": "AI wording",
+   "scores": "3·4·4·4",
+   "result": "Partial",
+   "why": "an expected amount or percent is missing; judge: Accurate totals, percent and periods; omits the ₹2,500 absolute change. No causes or speculation."
+  },
+  {
+   "id": "INS-006",
+   "scenario": "No pattern",
+   "expected": "no insight",
+   "critical": "",
+   "facts": "Type: no_pattern | Metrics: total_spend_inr = 4,200 · transaction_count = 5 · data_status = sufficient_for_summary (not citable) | Period: October 2026 | Pattern: none | Evidence: none",
+   "cited": "—",
+   "ai": "no insight",
+   "app": "No card / rule wording",
+   "scores": "—",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-007",
+   "scenario": "Insufficient history",
+   "expected": "no insight",
+   "critical": "",
+   "facts": "Type: insufficient_data | Metrics: transaction_count = 2 · minimum_data_status = not_met | Period: October 2026 | Pattern: none | Evidence: none",
+   "cited": "—",
+   "ai": "no insight",
+   "app": "No card / rule wording",
+   "scores": "—",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-008",
+   "scenario": "Candidate mismatch",
+   "expected": "reject candidate",
+   "critical": "",
+   "facts": "Type: invalid_candidate | Metrics: food_spend_inr = 3,000 · total_spend_inr = 10,000 | Period: October 2026 | Pattern: PAT-008 \"Food spending was ₹4,000\" | Evidence: TX-801",
+   "cited": "—",
+   "ai": "reject candidate (reason: The candidate's stated food spending amount does not match the verified food spending metric for October 2026.)",
+   "app": "No card / rule wording",
+   "scores": "—",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-009",
+   "scenario": "No causality",
+   "expected": "generate explanation: Shopping spending increased from ₹5,000 to ₹7,000, a 40% increase.",
+   "critical": "",
+   "facts": "Type: pattern_explanation | Metrics: shopping_current_inr = 7,000 · shopping_previous_inr = 5,000 · change_percent = 40 | Period: October 2026 vs September 2026 | Pattern: PAT-009 \"Shopping spend increased 40%\" | Evidence: TX-901",
+   "cited": "Keys: shopping_current_inr, shopping_previous_inr, change_percent | Refs: TX-901 | Numbers in text: 40, 7,000, 40, 5,000",
+   "ai": "generate explanation: Shopping spend up 40% in October — Shopping spend was ₹7,000 in October 2026, up 40% from ₹5,000 in September 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-010",
+   "scenario": "No prediction",
+   "expected": "generate explanation: Entertainment spending increased from ₹600 to ₹900, a 50% increase.",
+   "critical": "",
+   "facts": "Type: trend_description | Metrics: entertainment_current_inr = 900 · entertainment_previous_inr = 600 · change_percent = 50 | Period: October 2026 vs September 2026 | Pattern: PAT-010 \"Entertainment spending increased 50%\" | Evidence: TX-1001",
+   "cited": "Keys: entertainment_current_inr, entertainment_previous_inr, change_percent | Refs: TX-1001 | Numbers in text: 50, 900, 50, 600",
+   "ai": "generate explanation: Entertainment spending up 50% from September — Entertainment spending was ₹900 in October 2026, up 50% from ₹600 in September 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-011",
+   "scenario": "Period fidelity",
+   "expected": "generate explanation: Spending rose from ₹3,500 in 5–11 Oct to ₹4,200 in 12–18 Oct, 20%.",
+   "critical": "",
+   "facts": "Type: period_comparison | Metrics: current_total_inr = 4,200 · previous_total_inr = 3,500 · change_percent = 20 | Period: 12–18 October 2026 vs 5–11 October 2026 | Pattern: PAT-011 \"Weekly spending increased 20%\" | Evidence: TX-1101",
+   "cited": "Keys: current_total_inr, previous_total_inr, change_percent | Refs: TX-1101 | Numbers in text: 20, 4,200, 20, 3,500",
+   "ai": "generate explanation: Weekly spending up 20% — Spending was ₹4,200 from 12–18 October 2026, up 20% from ₹3,500 in 5–11 October 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-012",
+   "scenario": "Evidence alignment",
+   "expected": "generate explanation: One rent payment totalling ₹10,000 was recorded in the selected period.",
+   "critical": "",
+   "facts": "Type: evidence_summary | Metrics: rent_spend_inr = 10,000 · transaction_count = 1 | Period: October 2026 | Pattern: PAT-012 \"One rent payment recorded\" | Evidence: TX-1201",
+   "cited": "Keys: rent_spend_inr, transaction_count | Refs: TX-1201 | Numbers in text: 10,000",
+   "ai": "generate explanation: One rent payment in October 2026 — One rent payment of ₹10,000 was recorded in October 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-013",
+   "scenario": "Duplicate suppression",
+   "expected": "reuse existing",
+   "critical": "",
+   "facts": "Type: duplicate_candidate | Metrics: food_spend_inr = 6,000 · previous_food_spend_inr = 4,000 · change_percent = 50 · data_version = v17 | Period: October 2026 | Pattern: PAT-001 \"Food spending increased month-on-month\" | Evidence: TX-101, TX-102",
+   "cited": "—",
+   "ai": "not called",
+   "app": "reuse_existing · insight PAT-001-v17",
+   "scores": "—",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-014",
+   "scenario": "No recommendations",
+   "expected": "generate explanation: State Food & Dining accounts for 50% of recorded spend; no advice.",
+   "critical": "",
+   "facts": "Type: recommendation_boundary | Metrics: food_spend_inr = 6,000 · total_spend_inr = 12,000 · food_share_percent = 50 | Period: October 2026 | Pattern: PAT-014 \"Food accounts for half of spending\" | Evidence: TX-1401",
+   "cited": "Keys: food_spend_inr, total_spend_inr, food_share_percent | Refs: TX-1401 | Numbers in text: 50, 6,000, 12,000",
+   "ai": "generate explanation: Food accounts for half of spending — In October 2026, food accounted for 50% of total spending, ₹6,000 of ₹12,000.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  },
+  {
+   "id": "INS-015",
+   "scenario": "Schema/evidence",
+   "expected": "generate explanation: Short title and explanation reference only supplied candidate, metric keys and evidence IDs.",
+   "critical": "",
+   "facts": "Type: output_contract | Metrics: travel_spend_inr = 2,400 · transaction_count = 4 | Period: October 2026 | Pattern: PAT-015 \"Travel spending recorded\" | Evidence: TX-1501, TX-1502",
+   "cited": "Keys: travel_spend_inr, transaction_count | Refs: TX-1501, TX-1502 | Numbers in text: 2,400, 4",
+   "ai": "generate explanation: Travel spending recorded in October 2026 — Travel spending totaled ₹2,400 across 4 transactions in October 2026.",
+   "app": "AI wording",
+   "scores": "4·4·4·4",
+   "result": "Pass",
+   "why": ""
+  }
+ ],
+ "detail": [
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures and periods match verified metrics; no causes, predictions or advice; title consistent with approved candidate.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures and periods match supplied metrics; no causal claims or predictions; title consistent with approved candidate.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures match verified metrics; period label correct; no ranking, cause or advice claimed.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures match the supplied metrics; the claim is correctly limited to listed categories, with no causes, predictions or advice.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 0,
+   "judge": {
+    "factual": 3,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "Accurate totals, percent and periods; omits the ₹2,500 absolute change. No causes or speculation.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": false,
+   "contract_ok": true,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": false,
+   "contract_ok": true,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": false,
+   "contract_ok": true,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures and periods match the supplied metrics and labels; no causes, predictions or advice. The title's 'October' shorthand is acceptable.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "Matches ₹600→₹900, 50% increase with correct period labels; no forecast or causal claims.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures and date ranges match exactly. Title is consistent with PAT-011. No speculation or renamed period.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "Matches the verified metrics exactly and uses the supplied period label. No prohibited claims of recurrence, lateness or increase.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": false,
+   "contract_ok": true,
+   "reuse_checks": {
+    "AI not called": true,
+    "same insight id returned": true,
+    "no new card": true
+   },
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 1,
+   "facts_hit": 1,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "All figures match verified metrics; correct period; title mirrors candidate; no advice or speculation.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  },
+  {
+   "status_ok": true,
+   "generated": true,
+   "contract_ok": true,
+   "ungrounded": [],
+   "banned": [],
+   "facts_n": 0,
+   "facts_hit": 0,
+   "judge": {
+    "factual": 4,
+    "grounding": 4,
+    "no_speculation": 4,
+    "clarity": 4,
+    "unsupported_claim": false,
+    "notes": "Matches the supplied ₹2,400, 4 transactions and October 2026 label. No invented keys, IDs or causes. Evidence IDs not cited but none invented.",
+    "judge_model": "claude-opus-5-5"
+   },
+   "unsupported": false,
+   "critical": false
+  }
+ ]
+}

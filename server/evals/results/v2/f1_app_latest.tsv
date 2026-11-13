@@ -1,0 +1,31 @@
+case	ai_sent	app_outcome	filed	shown_first	basis	score	expected_top1	critical
+CAT-001	yes	asked, no guess			AI	0.20	Food & Dining	
+CAT-002	yes	guesses offered		Travel	AI	0.75	Travel	
+CAT-003	yes	guesses offered		Groceries	SHOP_WORDS	0.75	Groceries	
+CAT-004	yes	guesses offered		Entertainment	AI	0.75	Entertainment	
+CAT-005	yes	filed on its own	Healthcare	Healthcare	SHOP_WORDS	0.95	Healthcare	
+CAT-006	yes	guesses offered		Groceries	SHOP_WORDS	0.65	Groceries	
+CAT-007	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-008	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-009	yes	asked, no guess			AI	0.20	Groceries	
+CAT-010	yes	asked, no guess			AI	0.00	Groceries	
+CAT-011	yes	asked, no guess			AI	0.20	Shopping	
+CAT-012	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-013	yes	asked, no guess			AI	0.00	Food & Dining	
+CAT-014	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-015	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-016	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-017	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-018	yes	asked, no guess			AI	0.00	Groceries	
+CAT-019	yes	asked, no guess			AI	0.00	ABSTAIN	
+CAT-020	yes	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-021	yes	filed on its own	Education	Education	SHOP_WORDS	0.95	Education	
+CAT-022	yes	filed on its own	Personal Care	Personal Care	SHOP_WORDS	0.95	Personal Care	
+CAT-023	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-024	yes	filed on its own	Food & Dining	Food & Dining	SHOP_WORDS	0.95	Food & Dining	
+CAT-025	yes	asked, no guess			AI	0.00	ABSTAIN	
+
+auto_assigned	4	precision	100%
+abstain_cases_not_filed	100%	asked_with_no_guess	100%
+suggest_cases_first_shown_right	57%	in_first_3	57%
+critical_failures	0	

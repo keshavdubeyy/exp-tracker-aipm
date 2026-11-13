@@ -1,20 +1,20 @@
 {
  "summary": {
   "run_date": "2026-11-13",
-  "dataset_version": "Golden Dataset v1.0 (Draft)",
-  "server": "https://expense-tracker-metrics.vercel.app",
+  "dataset_version": "Golden Dataset v1.1 (Draft)",
+  "server": "http://127.0.0.1:8767",
   "model": "claude-haiku-5-5",
   "cases_executed": 25,
   "errors": 0,
-  "f1_top1_accuracy": 92.9,
-  "f1_top3_accuracy": 100.0,
-  "f1_false_abstain_rate": 0.0,
-  "f1_abstention_strict": 18.2,
+  "f1_top1_accuracy": 78.6,
+  "f1_top3_accuracy": 78.6,
+  "f1_false_abstain_rate": 21.4,
+  "f1_abstention_strict": 100.0,
   "f1_abstention_or_unsure": 100.0,
   "f1_confident_guess_on_abstain_cases": 0,
   "f1_output_contract_valid": 100.0,
   "f1_rejected_as_malformed": 2,
-  "median_ms": 1376
+  "median_ms": 1237
  },
  "results": [
   {
@@ -44,14 +44,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Food & Dining",
-     "Groceries",
-     "Others"
+     "Food & Dining"
     ],
-    "confident": true,
+    "confident": false,
     "source": "ai"
    },
-   "ms": 2308,
+   "ms": 2294,
    "error": "",
    "score": {
     "mapped_output": {
@@ -60,26 +58,18 @@
       {
        "category_id": "food_dining",
        "rank": 1
-      },
-      {
-       "category_id": "groceries",
-       "rank": 2
-      },
-      {
-       "category_id": "others",
-       "rank": 3
       }
      ],
-     "requires_user_confirmation": false
+     "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
     "top1_correct": true,
     "top3_hit": true,
-    "all_in_acceptable": false,
+    "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": false,
-    "confident": true
+    "confident": false
    },
    "expected_top1": "Food & Dining",
    "expected": {
@@ -130,7 +120,7 @@
     "confident": true,
     "source": "ai"
    },
-   "ms": 1522,
+   "ms": 1026,
    "error": "",
    "score": {
     "mapped_output": {
@@ -196,13 +186,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Groceries",
-     "Food & Dining"
+     "Groceries"
     ],
-    "confident": true,
+    "confident": false,
     "source": "ai"
    },
-   "ms": 1376,
+   "ms": 1209,
    "error": "",
    "score": {
     "mapped_output": {
@@ -211,22 +200,18 @@
       {
        "category_id": "groceries",
        "rank": 1
-      },
-      {
-       "category_id": "food_dining",
-       "rank": 2
       }
      ],
-     "requires_user_confirmation": false
+     "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
     "top1_correct": true,
     "top3_hit": true,
-    "all_in_acceptable": false,
+    "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": false,
-    "confident": true
+    "confident": false
    },
    "expected_top1": "Groceries",
    "expected": {
@@ -276,13 +261,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Entertainment",
-     "Bills & Utilities"
+     "Entertainment"
     ],
     "confident": true,
     "source": "ai"
    },
-   "ms": 1551,
+   "ms": 1698,
    "error": "",
    "score": {
     "mapped_output": {
@@ -291,10 +275,6 @@
       {
        "category_id": "entertainment",
        "rank": 1
-      },
-      {
-       "category_id": "bills_utilities",
-       "rank": 2
       }
      ],
      "requires_user_confirmation": false
@@ -303,7 +283,7 @@
     "expect_abstain": false,
     "top1_correct": true,
     "top3_hit": true,
-    "all_in_acceptable": false,
+    "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": false,
     "confident": true
@@ -357,7 +337,7 @@
     "confident": true,
     "source": "ai"
    },
-   "ms": 1563,
+   "ms": 1106,
    "error": "",
    "score": {
     "mapped_output": {
@@ -427,13 +407,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Groceries",
-     "Food & Dining"
+     "Groceries"
     ],
-    "confident": true,
+    "confident": false,
     "source": "ai"
    },
-   "ms": 1633,
+   "ms": 1195,
    "error": "",
    "score": {
     "mapped_output": {
@@ -442,13 +421,9 @@
       {
        "category_id": "groceries",
        "rank": 1
-      },
-      {
-       "category_id": "food_dining",
-       "rank": 2
       }
      ],
-     "requires_user_confirmation": false
+     "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
@@ -457,7 +432,7 @@
     "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": true,
-    "confident": true
+    "confident": false
    },
    "expected_top1": "Groceries",
    "expected": {
@@ -506,28 +481,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1746,
+   "ms": 1046,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -565,33 +533,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others",
-     "Shopping"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1246,
+   "ms": 1678,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      },
-      {
-       "category_id": "shopping",
-       "rank": 2
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -630,13 +586,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Groceries",
-     "Shopping"
+     "Groceries"
     ],
-    "confident": true,
+    "confident": false,
     "source": "ai"
    },
-   "ms": 1180,
+   "ms": 1469,
    "error": "",
    "score": {
     "mapped_output": {
@@ -645,13 +600,9 @@
       {
        "category_id": "groceries",
        "rank": 1
-      },
-      {
-       "category_id": "shopping",
-       "rank": 2
       }
      ],
-     "requires_user_confirmation": false
+     "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
@@ -660,7 +611,7 @@
     "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": true,
-    "confident": true
+    "confident": false
    },
    "expected_top1": "Groceries",
    "expected": {
@@ -709,36 +660,24 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Groceries",
-     "Shopping"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1420,
+   "ms": 1145,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "groceries",
-       "rank": 1
-      },
-      {
-       "category_id": "shopping",
-       "rank": 2
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
-    "top1_correct": true,
-    "top3_hit": true,
+    "top1_correct": false,
+    "top3_hit": false,
     "all_in_acceptable": true,
-    "false_abstain": false,
+    "false_abstain": true,
     "expected_confirmation": true,
     "confident": false
    },
@@ -790,13 +729,12 @@
    "notes": [],
    "raw_output": {
     "suggestions": [
-     "Shopping",
-     "Others"
+     "Shopping"
     ],
-    "confident": true,
+    "confident": false,
     "source": "ai"
    },
-   "ms": 1110,
+   "ms": 1143,
    "error": "",
    "score": {
     "mapped_output": {
@@ -805,13 +743,9 @@
       {
        "category_id": "shopping",
        "rank": 1
-      },
-      {
-       "category_id": "others",
-       "rank": 2
       }
      ],
-     "requires_user_confirmation": false
+     "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
@@ -820,7 +754,7 @@
     "all_in_acceptable": true,
     "false_abstain": false,
     "expected_confirmation": true,
-    "confident": true
+    "confident": false
    },
    "expected_top1": "Shopping",
    "expected": {
@@ -869,28 +803,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1319,
+   "ms": 1415,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -928,36 +855,24 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Food & Dining",
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1878,
+   "ms": 1289,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "food_dining",
-       "rank": 1
-      },
-      {
-       "category_id": "others",
-       "rank": 2
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
-    "top1_correct": true,
-    "top3_hit": true,
+    "top1_correct": false,
+    "top3_hit": false,
     "all_in_acceptable": true,
-    "false_abstain": false,
+    "false_abstain": true,
     "expected_confirmation": true,
     "confident": false
    },
@@ -1006,7 +921,7 @@
     "no payee: the app never sends a payment with no name or UPI ID to the AI"
    ],
    "raw_output": null,
-   "ms": 350,
+   "ms": 14,
    "error": "",
    "score": {
     "rejected": true,
@@ -1052,7 +967,7 @@
     "no payee: the app never sends a payment with no name or UPI ID to the AI"
    ],
    "raw_output": null,
-   "ms": 388,
+   "ms": 7,
    "error": "",
    "score": {
     "rejected": true,
@@ -1096,28 +1011,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1574,
+   "ms": 1600,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -1155,28 +1063,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1256,
+   "ms": 1237,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -1214,54 +1115,37 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Groceries",
-     "Shopping",
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1184,
+   "ms": 1581,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "groceries",
-       "rank": 1
-      },
-      {
-       "category_id": "shopping",
-       "rank": 2
-      },
-      {
-       "category_id": "others",
-       "rank": 3
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": false,
     "top1_correct": false,
-    "top3_hit": true,
+    "top3_hit": false,
     "all_in_acceptable": true,
-    "false_abstain": false,
+    "false_abstain": true,
     "expected_confirmation": true,
     "confident": false
    },
-   "expected_top1": "Shopping",
+   "expected_top1": "Groceries",
    "expected": {
     "status": "suggest",
     "suggestions": [
      {
-      "category_id": "shopping",
+      "category_id": "groceries",
       "rank": 1
      },
      {
-      "category_id": "groceries",
+      "category_id": "shopping",
       "rank": 2
      },
      {
@@ -1270,7 +1154,7 @@
      }
     ],
     "requires_user_confirmation": true,
-    "notes": "Illustrative gold response; application policy decides auto-assignment."
+    "notes": "Illustrative gold response; application policy decides auto-assignment. v1.1 (13 Nov 2026, team decision): label Groceries, Shopping accepted as an equally correct first pick. Reason: 'Mart' in India usually means daily needs (D-Mart, the corner mart); a campus mart mostly sells snacks, instant food, toiletries and household basics = Groceries in our list. The case is context-dependent by design, so both labels are honest and it must never be filed on its own. Both judges already scored correctness 3 ('acceptable alternative'). Not changed because of the model's answer."
    }
   },
   {
@@ -1299,38 +1183,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Shopping",
-     "Food & Dining",
-     "Entertainment"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1291,
+   "ms": 1835,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "shopping",
-       "rank": 1
-      },
-      {
-       "category_id": "food_dining",
-       "rank": 2
-      },
-      {
-       "category_id": "entertainment",
-       "rank": 3
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -1368,28 +1235,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 2667,
+   "ms": 1701,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -1433,7 +1293,7 @@
     "confident": true,
     "source": "ai"
    },
-   "ms": 1362,
+   "ms": 1173,
    "error": "",
    "score": {
     "mapped_output": {
@@ -1504,7 +1364,7 @@
     "confident": true,
     "source": "ai"
    },
-   "ms": 1559,
+   "ms": 1137,
    "error": "",
    "score": {
     "mapped_output": {
@@ -1571,28 +1431,21 @@
     "credit: the app never sends money received to the AI (income is rules-based)"
    ],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 2734,
+   "ms": 1238,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },
@@ -1636,7 +1489,7 @@
     "confident": true,
     "source": "ai"
    },
-   "ms": 1074,
+   "ms": 1576,
    "error": "",
    "score": {
     "mapped_output": {
@@ -1701,28 +1554,21 @@
    },
    "notes": [],
    "raw_output": {
-    "suggestions": [
-     "Others"
-    ],
+    "suggestions": [],
     "confident": false,
     "source": "ai"
    },
-   "ms": 1238,
+   "ms": 1150,
    "error": "",
    "score": {
     "mapped_output": {
-     "status": "suggest",
-     "suggestions": [
-      {
-       "category_id": "others",
-       "rank": 1
-      }
-     ],
+     "status": "insufficient_evidence",
+     "suggestions": [],
      "requires_user_confirmation": true
     },
     "contract_ok": true,
     "expect_abstain": true,
-    "abstained": false,
+    "abstained": true,
     "abstained_or_unsure": true,
     "confident_guess_on_abstain_case": false
    },

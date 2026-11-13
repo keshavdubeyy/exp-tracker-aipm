@@ -54,16 +54,75 @@ def pct(x: int, y: int):
     return None if y == 0 else round(100 * x / y, 1)
 
 
+def indian(v) -> str:
+    """5000 -> "5,000", 125000 -> "1,25,000" (as the app and the AI write rupees). Display only."""
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return str(v)
+    neg, n = v < 0, abs(v)
+    whole, frac = int(n), ("%g" % (n - int(n)))[1:] if n != int(n) else ""
+    d = str(whole)
+    if len(d) > 3:
+        head, tail = d[:-3], d[-3:]
+        head = ",".join([head[max(0, i - 2):i] for i in range(len(head), 0, -2)][::-1])
+        d = head + "," + tail
+    return ("-" if neg else "") + d + frac
+
+
+def facts_supplied(case: dict) -> str:
+    """Everything the AI was given, for the reviewer to check numbers against (golden eval F2 #4).
+    Metrics not in metric_keys are marked: the AI may see them but shouldn't cite them."""
+    i = case["input"]
+    ev = i["validated_evidence_facts_or_references"]
+    citable = set(ev.get("metric_keys") or [])
+    metrics = " · ".join(f"{k} = {indian(v)}" + ("" if k in citable else " (not citable)") for k, v in i["verified_metrics"].items())
+    lab = i["period_and_comparison_labels"]
+    period = lab["current_period"] + (f" vs {lab['comparison_period']}" if lab.get("comparison_period") else "")
+    cand = i.get("approved_pattern_candidate")
+    parts = [f"Type: {i['approved_insight_type']}", f"Metrics: {metrics or 'none'}", f"Period: {period}",
+             f"Pattern: {cand['candidate_id']} \"{cand['pattern']}\"" if cand else "Pattern: none",
+             "Evidence: " + (", ".join(ev.get("evidence_refs") or []) or "none")]
+    return " | ".join(parts)
+
+
+def ai_cited(case: dict, raw: dict, resp: dict) -> str:
+    """What the AI cited (keys and refs, after the server's filter) and every number in its words,
+    flagging numbers that only come from a metric it wasn't asked to cite."""
+    i = case["input"]
+    citable = set(i["validated_evidence_facts_or_references"].get("metric_keys") or [])
+    text = f"{raw.get('title') or ''} {raw.get('explanation') or ''}"
+    by_value: dict = {}
+    for k, v in i["verified_metrics"].items():
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            by_value.setdefault(abs(float(v)), set()).add(k)
+    lab = i["period_and_comparison_labels"]
+    dates = set(_numbers(f"{lab['current_period']} {lab.get('comparison_period') or ''}"))  # "October 2026" isn't an amount
+    nums = []
+    for n in _numbers(text):
+        if n in dates:
+            continue
+        keys = by_value.get(n, set())
+        flag = " (from non-citable " + ", ".join(sorted(keys)) + ")" if keys and not keys & citable else ""
+        nums.append(indian(int(n) if n == int(n) else n) + flag)
+    return " | ".join([
+        "Keys: " + (", ".join(resp.get("metric_keys_used") or []) or "none"),
+        "Refs: " + (", ".join(resp.get("evidence_refs") or []) or "none"),
+        "Numbers in text: " + (", ".join(nums) or "none"),
+    ])
+
+
 def score(case: dict, resp: dict | None, err: str) -> dict:
     exp = case["expected"]
     req = ExplainRequest(**case["input"])
     exp_status = exp["status"]
     row = {"id": case["id"], "scenario": case["scenario"],
            "expected": exp_status.replace("_", " ") + (f": {exp['explanation']}" if exp.get("explanation") else ""),
-           "critical": ""}
+           "critical": "", "facts": facts_supplied(case), "cited": "—"}
     if resp is None:
         return {**row, "ai": f"Error: {err}", "app": "Rule wording (AI unavailable)", "result": "Miss",
                 "why": "No answer from /explain", "_s": {"error": True}}
+
+    if exp_status == "reuse_existing":
+        return score_reuse(row, exp, resp)
 
     raw = resp["raw"]
     text = f"{raw.get('title') or ''} {raw.get('explanation') or ''}".strip()
@@ -125,10 +184,38 @@ def score(case: dict, resp: dict | None, err: str) -> dict:
         why.append("judge: " + (j.get("notes") or ""))
     if resp.get("guard_issues") and not crit:
         why.append("guard kept it off the screen")
-    if case["id"] == "INS-013":
-        why.append("app side: the same insight reuses its saved wording (InsightWriter cache), so no duplicate card")
     return {**row, "ai": ai, "app": app, "scores": scores, "result": result, "why": "; ".join(why),
-            "critical": crit, "_s": s}
+            "critical": crit, "cited": ai_cited(case, raw, resp) if s["generated"] else "—", "_s": s}
+
+
+def score_reuse(row: dict, exp: dict, resp: dict) -> dict:
+    """Golden v1.1 INS-013, app layer: an unchanged insight must reuse the stored card. Pass only if all three hold."""
+    checks = {
+        "AI not called": resp.get("ai_called") is False,
+        "same insight id returned": bool(exp.get("insight_id")) and resp.get("insight_id") == exp.get("insight_id")
+                                    and resp.get("status") == "reuse_existing",
+        "no new card": resp.get("status") != "generate_explanation" and not resp.get("title") and not resp.get("explanation"),
+    }
+    failed = [k for k, ok in checks.items() if not ok]
+    new_card = not checks["no new card"]
+    s = {"status_ok": not failed, "generated": False, "contract_ok": True, "reuse_checks": checks, "critical": new_card}
+    result = "Pass" if not failed else ("Critical" if new_card else "Miss")
+    return {**row, "ai": "not called" if checks["AI not called"] else f"called: {resp.get('status')}",
+            "app": f"{resp.get('status')}" + (f" · insight {resp.get('insight_id')}" if resp.get("insight_id") else ""),
+            "scores": "—", "result": result, "why": "; ".join(f"failed: {k}" for k in failed),
+            "critical": "New card created for an unchanged insight" if new_card else "", "cited": "—", "_s": s}
+
+
+REVIEW_COLS = ["id", "scenario", "facts", "expected", "ai", "cited", "app", "scores", "result", "why"]
+
+
+def write_review(rows: list, path: str) -> None:
+    """Review sheet for the human judge: everything needed to check numbers and evidence, plus empty score columns."""
+    head = ["Case", "Scenario", "Facts supplied", "Expected", "AI wrote", "AI cited", "App shows", "LLM judge F·G·S·C",
+            "Result", "Why", "Human F", "Human G", "Human S", "Human C", "Human notes"]
+    clean = lambda v: str(v or "").replace("\t", " ").replace("\n", " ")  # noqa: E731
+    lines = ["\t".join(head)] + ["\t".join([clean(r.get(c)) for c in REVIEW_COLS] + [""] * 5) for r in rows]
+    open(path, "w").write("\n".join(lines) + "\n")
 
 
 def main() -> None:
@@ -169,6 +256,7 @@ def main() -> None:
     }
     os.makedirs(os.path.join(HERE, "results"), exist_ok=True)
     json.dump({**run, "detail": S}, open(os.path.join(HERE, "results", "f2_latest.json"), "w"), indent=1, ensure_ascii=False)
+    write_review(rows, os.path.join(HERE, "results", "f2_review.tsv"))  # open in Sheets/Excel for human scoring
     out, _, err = post("/evals/runs", run, {"Authorization": AUTH})
     print(json.dumps(summary, indent=1))
     print("uploaded" if out else f"upload failed: {err}")

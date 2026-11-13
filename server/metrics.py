@@ -382,10 +382,11 @@ CRITERIA: List[Criterion] = [
     # 2. Smart categorisation
     Criterion(CAT, "AI suggestion hit rate", "≥ 80%", pooled("cat_ai_top3", "cat_ai_picked"), ge(80), basis=has("cat_ai_picked"),
               meaning="When the AI made the guesses, the user's pick was one of its top 3"),
-    Criterion(CAT, "AI first-guess rate", "≥ 50%", pooled("cat_ai_first", "cat_ai_picked"), ge(50), basis=has("cat_ai_picked"),
-              meaning="When the AI made the guesses, the user picked its first guess"),
-    Criterion(CAT, "AI categories kept", "≥ 85%", pooled("cat_ai_auto_kept", "cat_ai_auto"), ge(85), basis=has("cat_ai_auto"),
-              meaning="Categories the AI filed on its own (marked ✦) that the user never changed. Sent by build 455954 and later"),
+    # Was "AI categories kept" (cat_ai_auto_kept / cat_ai_auto), merged with "AI first-guess rate" on 13 Nov 2026: the AI no
+    # longer files on its own (three tiers), so the question is how often its first guess is the one the user accepts.
+    # cat_ai_auto / cat_ai_auto_kept are still received and stored, just not shown.
+    Criterion(CAT, "AI first pick accepted", "≥ 50%", pooled("cat_ai_first", "cat_ai_picked"), ge(50), basis=has("cat_ai_picked"),
+              meaning="Of payments where the AI's guesses were shown and the user picked, the share where they tapped the AI's first suggestion"),
     Criterion(CAT, "Categorisation accuracy", "≥ 85%", pooled("cat_auto_kept", "cat_auto"), ge(85), basis=has("cat_auto"),
               meaning="Categories the app filled in on its own that the user never changed"),
     Criterion(CAT, "Suggestion hit rate (all sources)", "≥ 80%", pooled("cat_picked_top3", "cat_picked"), ge(80), basis=has("cat_picked"),

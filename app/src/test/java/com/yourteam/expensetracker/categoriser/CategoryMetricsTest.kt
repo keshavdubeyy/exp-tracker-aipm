@@ -56,7 +56,7 @@ class CategoryMetricsTest {
         assertEquals(4, c["cat_picked"])
         val m = CategoryMetrics.compute(listOf(first, second, miss, words)).associateBy { it.name }
         assertEquals(67, m.getValue("AI suggestion hit rate").percent)
-        assertEquals(33, m.getValue("AI first-guess rate").percent)
+        assertEquals(33, m.getValue("AI first pick accepted").percent)
     }
 
     @Test fun pastPaymentsAtInstall() {
