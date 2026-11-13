@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scan & Pay shortcut: scan frame on the accent colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#98BBF4" android:pathData="M24,0a24,24 0 1,0 0.01,0z" />
+    <path android:strokeColor="#0B0B0D" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M15,20v-3a2,2 0 0,1 2,-2h3 M28,15h3a2,2 0 0,1 2,2v3 M33,28v3a2,2 0 0,1 -2,2h-3 M20,33h-3a2,2 0 0,1 -2,-2v-3 M14,24h20" />
+</vector>

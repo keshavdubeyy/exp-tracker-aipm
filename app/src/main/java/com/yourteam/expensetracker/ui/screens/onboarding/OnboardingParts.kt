@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +54,7 @@ import com.yourteam.expensetracker.ui.theme.TextPrimary
 import com.yourteam.expensetracker.ui.theme.TextSecondary
 
 /** Onboarding headline (DESIGN.md §2 "onboardingTitle"): 28/34, 600. */
-internal val ObTitle = AppType.sectionTitle.copy(fontSize = 28.sp, lineHeight = 34.sp)
+internal val ObTitle = AppType.sectionTitle.copy(fontSize = 24.sp, lineHeight = 30.sp)
 
 /**
  * One onboarding screen: optional back + step dots on top, scrolling content, and a pinned
@@ -76,7 +73,7 @@ internal fun ObScaffold(
                 Box(
                     Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised).clickable(role = Role.Button, onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(22.dp)) }
+                ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(22.dp)) }
             }
             Spacer(Modifier.weight(1f))
             if (step != null) StepDots(step)
@@ -109,19 +106,19 @@ internal fun PrimaryButton(text: String, enabled: Boolean = true, modifier: Modi
     Box(
         modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(Spacing.button)
             .clip(PillShape)
             .background(if (enabled) Accent else SurfaceRaised)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, style = AppType.tab.copy(fontSize = 16.sp), color = if (enabled) OnAccent else TextSecondary) }
+    ) { Text(text, style = AppType.tab.copy(fontSize = 15.sp), color = if (enabled) OnAccent else TextSecondary) }
 }
 
 @Composable
 internal fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .height(52.dp)
+            .height(Spacing.button)
             .clip(PillShape)
             .background(SurfaceRaised)
             .clickable(role = Role.Button, onClick = onClick),
@@ -152,9 +149,9 @@ internal fun Footnote(text: String) {
 @Composable
 internal fun CheckRow(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = Positive, modifier = Modifier.size(20.dp))
+        Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Tick, contentDescription = null, tint = Positive, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(14.dp))
-        Text(text, style = AppType.body.copy(fontSize = 15.sp, lineHeight = 20.sp), color = TextPrimary)
+        Text(text, style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp), color = TextPrimary)
     }
 }
 
@@ -172,7 +169,7 @@ internal fun StepsBox(steps: List<String>, note: String? = null, fill: Color = B
                     Text("${i + 1}", style = AppType.chip, color = TextPrimary)
                 }
                 Spacer(Modifier.width(14.dp))
-                Text(bolded(s), style = AppType.body.copy(fontSize = 15.sp, lineHeight = 20.sp), color = TextPrimary)
+                Text(bolded(s), style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp), color = TextPrimary)
             }
         }
     }

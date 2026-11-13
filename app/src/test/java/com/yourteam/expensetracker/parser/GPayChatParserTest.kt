@@ -28,6 +28,12 @@ class GPayChatParserTest {
         assertEquals(at(2026, 11, 7, 12, 0), p.occurredAt)
     }
 
+    // Bug: money received showed up as spending to a payee called "you".
+    @Test fun moneyReceivedIsSkipped() {
+        val list = parse("Payment to Ramesh ₹20 Paid · 5:24 pm", "Payment to you ₹301 Paid · 6:10 pm")
+        assertEquals(listOf("Ramesh"), list.map { it.payee })
+    }
+
     @Test fun decemberSeenInNovemberIsLastYear() {
         val p = parse("Payment to Priya ₹50 Paid 28 Dec").single()
         assertEquals(at(2025, 12, 28, 12, 0), p.occurredAt)

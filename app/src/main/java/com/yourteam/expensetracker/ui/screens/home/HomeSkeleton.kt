@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,7 +66,7 @@ fun HomeSkeleton(modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = Spacing.circle)) {
                 Text("Payments", style = AppType.sectionTitle, color = TextSecondary)
                 Spacer(Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(28.dp))
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.height(Spacing.cardGap))
 

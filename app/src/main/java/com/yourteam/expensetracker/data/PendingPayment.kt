@@ -27,7 +27,20 @@ data class PendingPayment(
         const val STATUS_USER_CONFIRMED = "USER_CONFIRMED" // user said "Yes, I paid"
         const val STATUS_DISMISSED = "DISMISSED" // user said "Didn't go through"
 
-        /** [appName] for payments the user added by hand (cash, other apps). Saved as USER_CONFIRMED. */
+        /** [appName] for payments the user added by hand, from a bank account. Saved as USER_CONFIRMED. */
         const val APP_MANUAL = "Manual"
+        /** Added by hand: money out, paid in cash. */
+        const val APP_MANUAL_CASH = "Manual cash"
+        /** Added by hand: money in, into a bank account. */
+        const val APP_MANUAL_IN = "Manual in"
+        /** Added by hand: money in, received in cash. */
+        const val APP_MANUAL_IN_CASH = "Manual in cash"
+
+        fun isManualIn(appName: String) = appName == APP_MANUAL_IN || appName == APP_MANUAL_IN_CASH
+        fun isManualOut(appName: String) = appName == APP_MANUAL || appName == APP_MANUAL_CASH
+        fun isCash(appName: String) = appName == APP_MANUAL_CASH || appName == APP_MANUAL_IN_CASH
+
+        /** [appName] for payments started from our own scanner (M7) and handed to a UPI app. */
+        const val APP_SCAN = "Scan & Pay"
     }
 }

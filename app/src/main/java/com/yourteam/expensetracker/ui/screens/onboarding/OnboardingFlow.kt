@@ -1,6 +1,7 @@
 package com.yourteam.expensetracker.ui.screens.onboarding
 
 import android.Manifest
+import com.yourteam.expensetracker.ui.theme.Spacing
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,9 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,7 +81,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private enum class Ob { WELCOME, SMS, IMPORT, FIRST_LOOK, EXTRAS, SMS_DENIED }
+private enum class Ob { WELCOME, SMS, IMPORT, SORT, FIRST_LOOK, EXTRAS, SMS_DENIED }
 
 /**
  * First-run flow (ONBOARDING.md, MVP M1 + M2 + M23). Starts at the first unfinished step.
@@ -102,6 +100,7 @@ fun OnboardingFlow(onDone: () -> Unit, returning: Boolean = false) {
             when {
                 !Onboarding.hasSms(context) -> if (returning || Onboarding.isStarted(context)) Ob.SMS else Ob.WELCOME
                 !Onboarding.isImportDone(context) -> Ob.IMPORT
+                !Onboarding.isSortDone(context) -> Ob.SORT
                 else -> Ob.FIRST_LOOK
             },
         )
@@ -137,7 +136,8 @@ fun OnboardingFlow(onDone: () -> Unit, returning: Boolean = false) {
                 onPermanentlyDenied = { go(Ob.SMS_DENIED) },
             )
             Ob.SMS_DENIED -> SmsDenied(onBack = { go(Ob.SMS, ahead = false) }, onGranted = ::smsGranted)
-            Ob.IMPORT -> Importing(repo, onContinue = { Onboarding.markImportDone(context); go(Ob.FIRST_LOOK) })
+            Ob.IMPORT -> Importing(repo, onContinue = { Onboarding.markImportDone(context); go(Ob.SORT) })
+            Ob.SORT -> SortPastScreen(repo, onContinue = { Onboarding.markSortDone(context); go(Ob.FIRST_LOOK) })
             Ob.FIRST_LOOK -> FirstLookScreen(repo, onContinue = { go(Ob.EXTRAS) })
             Ob.EXTRAS -> Extras(onFinish = ::finish)
         }
@@ -155,11 +155,11 @@ private fun Welcome(onStart: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         IconTile(ObIcons.Chart, size = 64.dp, fill = Accent, tint = OnAccent, corner = 18.dp)
         Spacer(Modifier.height(28.dp))
-        ObHeading("See where your money goes. Automatically.", style = ObTitle.copy(fontSize = 34.sp, lineHeight = 40.sp))
+        ObHeading("See where your money goes. Automatically.", style = ObTitle.copy(fontSize = 28.sp, lineHeight = 34.sp))
         Spacer(Modifier.height(14.dp))
         Text(
             "We read your bank payment messages and sort your spending for you. No typing.",
-            style = AppType.body.copy(fontSize = 16.sp, lineHeight = 23.sp),
+            style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = TextSecondary,
         )
         Spacer(Modifier.height(28.dp))
@@ -201,7 +201,7 @@ private fun SmsExplainer(onBack: (() -> Unit)?, onGranted: () -> Unit, onPermane
         Spacer(Modifier.height(28.dp))
         ObHeading("Let us read your bank messages")
         Spacer(Modifier.height(10.dp))
-        Text("That's how payments show up here on their own.", style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp), color = TextSecondary)
+        Text("That's how payments show up here on their own.", style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp), color = TextSecondary)
         Spacer(Modifier.height(20.dp))
         CheckRow("Only messages from banks")
         CheckRow("We skip OTPs and personal chats")
@@ -257,7 +257,7 @@ private fun SmsDenied(onBack: () -> Unit, onGranted: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Text(
             "Without it we can't find your payments. Android won't ask again, so it has to be turned on in Settings.",
-            style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp),
+            style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = TextSecondary,
         )
         Spacer(Modifier.height(22.dp))
@@ -318,7 +318,7 @@ private fun Importing(repo: PaymentRepository, onContinue: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "New payments will show up here as your bank texts you.",
-                    style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp),
+                    style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
                     color = TextSecondary,
                 )
             }
@@ -327,7 +327,7 @@ private fun Importing(repo: PaymentRepository, onContinue: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "$found",
-                    style = AppType.hero.copy(fontSize = 64.sp, lineHeight = 68.sp),
+                    style = AppType.hero.copy(fontSize = 52.sp, lineHeight = 58.sp),
                     color = TextPrimary,
                     modifier = Modifier.clearAndSetSemantics {
                         contentDescription = "$announced payments found so far"
@@ -336,7 +336,7 @@ private fun Importing(repo: PaymentRepository, onContinue: () -> Unit) {
                 )
                 Text(
                     if (finished) "payments found" else "payments found so far",
-                    style = AppType.body.copy(fontSize = 16.sp, lineHeight = 22.sp),
+                    style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
                     color = TextSecondary,
                 )
                 Spacer(Modifier.height(24.dp))
@@ -388,7 +388,7 @@ private fun NotifCard(onAllow: () -> Unit, onNotNow: () -> Unit) {
             SecondaryButton("Not now", Modifier.weight(1f), onClick = onNotNow)
             Spacer(Modifier.width(8.dp))
             Box(
-                Modifier.weight(1f).height(52.dp).clip(PillShape).background(Accent)
+                Modifier.weight(1f).height(Spacing.button).clip(PillShape).background(Accent)
                     .clickable(role = Role.Button, onClick = onAllow),
                 contentAlignment = Alignment.Center,
             ) { Text("Allow", style = AppType.tab, color = OnAccent) }
@@ -424,17 +424,17 @@ private fun FirstLookScreen(repo: PaymentRepository, onContinue: () -> Unit) {
                 append("across ${look.paymentCount} payment${if (look.paymentCount == 1) "" else "s"}")
                 if (accounts > 0) append(" from $accounts bank account${if (accounts == 1) "" else "s"}")
             },
-            style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp),
+            style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = TextSecondary,
         )
         if (look.top.isNotEmpty()) {
             Spacer(Modifier.height(24.dp))
             Column(Modifier.fillMaxWidth().clip(CardShape).background(Surface).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text("Where most of it went", style = AppType.rowTitle.copy(fontSize = 17.sp, lineHeight = 22.sp), color = TextPrimary)
+                Text("Where most of it went", style = AppType.rowTitle.copy(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = TextPrimary)
                 look.top.forEach { (cat, share) ->
                     Column {
                         Row {
-                            Text(cat.category.orEmpty(), style = AppType.body.copy(fontSize = 15.sp), color = TextPrimary, modifier = Modifier.weight(1f))
+                            Text(cat.category.orEmpty(), style = AppType.body.copy(fontSize = 14.sp), color = TextPrimary, modifier = Modifier.weight(1f))
                             Text(Money.formatWhole(cat.totalPaise), style = AppType.rowTitle, color = TextPrimary)
                         }
                         Spacer(Modifier.height(8.dp))
@@ -452,7 +452,7 @@ private fun FirstLookScreen(repo: PaymentRepository, onContinue: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Text(
                     bolded("**${look.uncategorised} payment${if (look.uncategorised == 1) "" else "s"}** need${if (look.uncategorised == 1) "s" else ""} a category. You can do that later, a few at a time."),
-                    style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp),
+                    style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
                     color = TextSecondary,
                 )
             }
@@ -506,7 +506,7 @@ private fun Extras(onFinish: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         ObHeading("Catch the payments banks don't text about")
         Spacer(Modifier.height(10.dp))
-        Text("Optional. You can turn these on later in Profile.", style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp), color = TextSecondary)
+        Text("Optional. You can turn these on later in Profile.", style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp), color = TextSecondary)
         Spacer(Modifier.height(22.dp))
         ExtraCard(
             badge = { InitialsCircle("G") },
@@ -592,7 +592,7 @@ private fun ExtraCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.Check, contentDescription = null, tint = Positive, modifier = Modifier.size(18.dp))
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Tick, contentDescription = null, tint = Positive, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("On", style = AppType.tab, color = Positive)
             }
@@ -618,7 +618,7 @@ private fun ObSheet(title: String, onDismiss: () -> Unit, content: @Composable (
                 Box(
                     Modifier.size(44.dp).clip(PillShape).background(SurfaceRaised).clickable(role = Role.Button, onClick = onDismiss),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
+                ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
             }
             Spacer(Modifier.height(16.dp))
             content()
@@ -653,7 +653,7 @@ private fun RestrictedSheet(onTryAgain: () -> Unit, onOpenAppInfo: () -> Unit, o
     ObSheet("Switch greyed out? One extra step", onDismiss) {
         Text(
             "Android locks this for apps installed outside the Play Store until you allow it once.",
-            style = AppType.body.copy(fontSize = 15.sp, lineHeight = 21.sp),
+            style = AppType.body.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = TextSecondary,
         )
         Spacer(Modifier.height(16.dp))
@@ -670,7 +670,7 @@ private fun RestrictedSheet(onTryAgain: () -> Unit, onOpenAppInfo: () -> Unit, o
             SecondaryButton("Try again", Modifier.weight(1f), onClick = onTryAgain)
             Spacer(Modifier.width(8.dp))
             Box(
-                Modifier.weight(1f).height(52.dp).clip(PillShape).background(Accent).clickable(role = Role.Button, onClick = onOpenAppInfo),
+                Modifier.weight(1f).height(Spacing.button).clip(PillShape).background(Accent).clickable(role = Role.Button, onClick = onOpenAppInfo),
                 contentAlignment = Alignment.Center,
             ) { Text("Open App info", style = AppType.tab, color = OnAccent) }
         }

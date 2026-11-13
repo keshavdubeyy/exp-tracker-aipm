@@ -24,8 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -143,7 +141,7 @@ fun AskScreen(modifier: Modifier = Modifier, onBack: () -> Unit = {}, viewModel:
                     disabledContentColor = MaterialTheme.colorScheme.background,
                 ),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Ask")
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ArrowForward, contentDescription = "Ask")
             }
         }
     }

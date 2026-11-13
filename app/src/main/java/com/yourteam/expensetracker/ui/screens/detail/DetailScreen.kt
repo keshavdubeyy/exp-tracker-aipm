@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -60,7 +58,7 @@ fun DetailScreen(
     ) {
         item {
             TextButton(onClick = onBack, shape = PillShape) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("Back", style = MaterialTheme.typography.labelLarge)
             }
@@ -129,14 +127,14 @@ private data class Evidence(val title: String, val time: Long?, val detail: Stri
 
 private fun evidence(p: Payment, sms: SmsMessage?): List<Evidence> = buildList {
     p.started?.let {
-        add(Evidence("You started it in GPay", it.at, "The UPI PIN screen showed ${Money.format(it.paise)} to ${it.payee}."))
+        add(Evidence("You started it in ${it.app}", it.at, "${Money.format(it.paise)} to ${it.payee}."))
         when (it.answer) {
             UserAnswer.YES -> add(Evidence("You confirmed it went through", null))
             UserAnswer.NO -> add(Evidence("You said it didn't go through", null))
             UserAnswer.NONE -> Unit
         }
     }
-    p.chat?.let { add(Evidence("GPay chat shows it as paid", it.at, "Payment to ${it.payee} · ${Money.format(it.paise)}")) }
+    p.chat?.let { add(Evidence("${it.source} shows it as paid", it.at, "Payment to ${it.payee} · ${Money.format(it.paise)}")) }
     p.sms?.let { add(Evidence("Bank SMS from ${it.sender}", it.at, sms?.body)) }
 }
 

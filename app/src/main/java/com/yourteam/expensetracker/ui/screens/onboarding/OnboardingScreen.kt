@@ -38,7 +38,11 @@ fun SmsPermissionScreen(
         AppCard(modifier = Modifier.fillMaxWidth()) {
             Bullet("We look for messages from bank and payment senders, like HDFCBK or SBIINB.")
             Bullet("We skip OTPs, promotions and your personal chats.")
-            Bullet("Your messages stay on this phone. Nothing is uploaded.")
+            Bullet(
+                if (com.yourteam.expensetracker.categoriser.AiCategoriser.enabled)
+                    "Your messages stay on this phone. To suggest categories we send only a payee's name and amount, never the message."
+                else "Your messages stay on this phone. Nothing is uploaded.",
+            )
         }
         Spacer(Modifier.height(24.dp))
         Button(

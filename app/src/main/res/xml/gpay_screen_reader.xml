@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only GPay's windows are delivered to us. -->
+<!-- Only these UPI apps' windows are delivered to us (MVP M23): PhonePe, Navi, Paytm. Not GPay: it blocks payments while a reader can see it. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
@@ -8,4 +8,4 @@
     android:description="@string/gpay_accessibility_description"
     android:isAccessibilityTool="false"
     android:notificationTimeout="500"
-    android:packageNames="com.google.android.apps.nbu.paisa.user" />
+    android:packageNames="com.phonepe.app,com.naviapp,net.one97.paytm" />

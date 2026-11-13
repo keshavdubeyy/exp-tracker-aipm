@@ -20,8 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,7 +52,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.yourteam.expensetracker.categoriser.Categoriser
+import com.yourteam.expensetracker.categoriser.Categories
 import com.yourteam.expensetracker.parser.Amounts
 import com.yourteam.expensetracker.ui.feedback.Feedback
 import com.yourteam.expensetracker.ui.theme.Accent
@@ -79,14 +77,15 @@ private val amountInput = Regex("""^\d{0,7}(\.\d{0,2})?$""")
 private val pickedDay = DateTimeFormatter.ofPattern("EEE d MMM")
 
 /**
- * The + button on Home: add a payment by hand (cash, a card, another app).
+ * The + button on Home: add money out or money in by hand, from a bank account or in cash.
  * Amount is required; payee, category and day are optional (day defaults to today).
- * Future days can't be picked. [onSave] gets paise, payee, time in millis and category.
+ * Future days can't be picked. [onSave] gets paise, payee/sender, time in millis, category,
+ * whether it's money in, and whether it was cash.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPaymentSheet(
-    onSave: (paise: Long, payee: String, at: Long, category: String?) -> Unit,
+    onSave: (paise: Long, payee: String, at: Long, category: String?, moneyIn: Boolean, cash: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -97,6 +96,8 @@ fun AddPaymentSheet(
     var amount by remember { mutableStateOf("") }
     var payee by remember { mutableStateOf("") }
     var category by remember { mutableStateOf<String?>(null) }
+    var moneyIn by remember { mutableStateOf(false) }
+    var cash by remember { mutableStateOf(false) }
     var day by remember { mutableStateOf(today) }
     var pickingDate by remember { mutableStateOf(false) }
 
@@ -109,7 +110,7 @@ fun AddPaymentSheet(
         // Today: now. An earlier day: midday, so it sorts sensibly within that day.
         val time = if (day == today) LocalTime.now() else LocalTime.NOON
         val at = day.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        close { onSave(p, payee, at, category) }
+        close { onSave(p, payee, at, category, moneyIn, cash) }
     }
 
     if (pickingDate) {
@@ -155,11 +156,43 @@ fun AddPaymentSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(start = Spacing.screen, end = Spacing.screen - 4.dp),
             ) {
-                Text("Add a payment", style = AppType.statValue, color = TextPrimary, modifier = Modifier.weight(1f))
+                Text(if (moneyIn) "Add money in" else "Add a payment", style = AppType.statValue, color = TextPrimary, modifier = Modifier.weight(1f))
                 IconButton(
                     onClick = { close() },
                     modifier = Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised),
-                ) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextPrimary) }
+                ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = TextPrimary) }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // Money out | Money in
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .padding(horizontal = Spacing.screen)
+                    .fillMaxWidth()
+                    .clip(PillShape)
+                    .background(SurfaceRaised)
+                    .padding(4.dp),
+            ) {
+                listOf(false to "Money out", true to "Money in").forEach { (isIn, label) ->
+                    val on = moneyIn == isIn
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = Spacing.circle - 4.dp)
+                            .clip(PillShape)
+                            .background(if (on) Accent else SurfaceRaised)
+                            .clickable(role = Role.Tab) {
+                                if (!on) {
+                                    Feedback.tick()
+                                    moneyIn = isIn
+                                    category = null // the category lists differ
+                                }
+                            }
+                            .semantics { selected = on },
+                    ) { Text(label, style = AppType.tab, color = if (on) OnAccent else TextPrimary) }
+                }
             }
             Spacer(Modifier.height(20.dp))
 
@@ -190,12 +223,12 @@ fun AddPaymentSheet(
                 modifier = Modifier
                     .padding(horizontal = Spacing.screen)
                     .fillMaxWidth()
-                    .heightIn(min = 52.dp)
+                    .heightIn(min = Spacing.button)
                     .clip(PillShape)
                     .background(SurfaceRaised)
                     .padding(horizontal = 20.dp),
             ) {
-                if (payee.isEmpty()) Text("Paid to (e.g. Raju Tea Stall)", style = AppType.body, color = TextSecondary)
+                if (payee.isEmpty()) Text(if (moneyIn) "Received from (e.g. Priya)" else "Paid to (e.g. Raju Tea Stall)", style = AppType.body, color = TextSecondary)
                 BasicTextField(
                     value = payee,
                     onValueChange = { payee = it.take(60) },
@@ -204,14 +237,21 @@ fun AddPaymentSheet(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { save() }),
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Paid to" },
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = if (moneyIn) "Received from" else "Paid to" },
                 )
+            }
+            Spacer(Modifier.height(20.dp))
+
+            SheetLabel(if (moneyIn) "Received in" else "Paid with")
+            ChipRow {
+                SheetChip("Bank account", selected = !cash) { Feedback.tick(); cash = false }
+                SheetChip("Cash", selected = cash) { Feedback.tick(); cash = true }
             }
             Spacer(Modifier.height(20.dp))
 
             SheetLabel("Category")
             ChipRow {
-                Categoriser.all.forEach { c ->
+                (if (moneyIn) Categories.income else Categories.expense).forEach { c ->
                     SheetChip(c, selected = category == c) {
                         Feedback.tick() // F14
                         category = if (category == c) null else c // tap again to clear
@@ -235,12 +275,12 @@ fun AddPaymentSheet(
                 modifier = Modifier
                     .padding(horizontal = Spacing.screen)
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(Spacing.button)
                     .clip(PillShape)
                     .background(if (paise != null) Accent else SurfaceRaised)
                     .clickable(enabled = paise != null, role = Role.Button) { save() },
             ) {
-                Text("Add payment", style = AppType.tab, color = if (paise != null) OnAccent else TextSecondary)
+                Text(if (moneyIn) "Add money in" else "Add payment", style = AppType.tab, color = if (paise != null) OnAccent else TextSecondary)
             }
         }
     }

@@ -1,5 +1,8 @@
 package com.yourteam.expensetracker.notifications
 
+import com.yourteam.expensetracker.categoriser.PaymentFacts
+import com.yourteam.expensetracker.data.PaymentInputs
+import com.yourteam.expensetracker.data.PaymentRepository
 import com.yourteam.expensetracker.BuildConfig
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
@@ -27,8 +30,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Reads GPay's chat screens ("Payment to X ₹N Paid …") so small payments (no bank SMS, no GPay
- * notification) are still captured. The config limits events to GPay's package.
+ * Watches GPay and PhonePe (MVP M23). In both, the UPI PIN screen starts a payment and the
+ * "Did it go through?" pop-up asks once it closes. In GPay only, chat screens ("Payment to X ₹N
+ * Paid …") are also read so small payments are captured. The config limits events to these two
+ * packages; no other app's screens are ever delivered to us.
  * Debug builds log counts and masked words only; never names, IDs or amounts.
  */
 class GPayScreenReader : AccessibilityService() {
@@ -51,10 +56,11 @@ class GPayScreenReader : AccessibilityService() {
     private val overlay by lazy { PaymentOverlay(this) }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.packageName != GPAY_PACKAGE) return
+        val pkg = event.packageName?.toString() ?: return
+        val app = WATCHED[pkg] ?: return
 
         // Read every GPay window, not just the "active" one: the success screen may be an overlay.
-        val roots = gpayRoots()
+        val roots = rootsOf(setOf(pkg))
         val texts = mutableListOf<String>()
         val counts = IntArray(2) // [0] = nodes seen, [1] = nodes hidden as "data sensitive"
         roots.forEach { collectTexts(it, texts, counts, depth = 0) }
@@ -69,11 +75,17 @@ class GPayScreenReader : AccessibilityService() {
             if (texts.any { '₹' in it }) Log.d(TAG, "masked: " + GPayScreenParser.masked(texts))
         }
 
+        // For the Developer screen: did a keypad screen in this app look like the PIN screen? No words kept.
+        if (texts.count { it.trim().length == 1 && it.trim()[0].isDigit() } >= 8) {
+            PinScreenCheck.record(this, app, UpiPinScreenParser.diagnose(texts) + " · sensitive ${counts[1]}")
+        }
+
         // A payment is starting: the UPI PIN screen shows amount and payee.
         UpiPinScreenParser.parse(texts)?.let { pin ->
-            onPinScreen(pin.amountText, pin.payee)
+            onPinScreen(pin.amountText, pin.payee, app)
             return
         }
+        if (pkg != GPAY_PACKAGE) return // chat lines below are GPay's layout only
 
 
         // GPay's success screen is an animation with no text. The chat it returns to lists
@@ -129,10 +141,16 @@ class GPayScreenReader : AccessibilityService() {
             else -> return // already answered
         }
         pending = pendingDao.get(id) ?: return
+        // Feature 1: categorise it now, and offer our top 3 right in the pop-up.
+        val repo = PaymentRepository.get(this)
+        val facts = PaymentFacts(pending.payee, paise = PaymentInputs.started(pending)?.paise ?: 0, at = pending.detectedAt, method = "UPI")
+        val guess = repo.guessForNew(facts, "started-$id")
+        val category = OverlayCategory(guess.suggestions, guess.category)
+        CategoryPrompt.markAskedFor(this, facts, "started-$id") // asked here, so no separate notification
         val content = if (source != null) {
-            OverlayContent.Recorded(pending.amountText, pending.payee, source)
+            OverlayContent.Recorded(pending.amountText, pending.payee, source, category)
         } else {
-            OverlayContent.Ask(pending.amountText, pending.payee)
+            OverlayContent.Ask(pending.amountText, pending.payee, category)
         }
         withContext(Dispatchers.Main) {
             overlay.show(
@@ -141,6 +159,7 @@ class GPayScreenReader : AccessibilityService() {
                 onYes = { answer(id, PendingPayment.STATUS_USER_CONFIRMED) },
                 onNo = { answer(id, PendingPayment.STATUS_DISMISSED) },
                 onLater = { PaymentCheck.scheduleReminder(this@GPayScreenReader, id) },
+                onPickCategory = { c -> scope.launch { repo.setPayeeDefault(facts, c) } },
             )
         }
         if (isDebuggable) Log.d(TAG, "popup shown recorded=${source != null}")
@@ -167,25 +186,28 @@ class GPayScreenReader : AccessibilityService() {
     private fun answer(id: Long, status: String) {
         scope.launch {
             pendingDao.setStatus(id, status)
+            com.yourteam.expensetracker.metrics.CaptureLog.answered(this@GPayScreenReader, id, com.yourteam.expensetracker.metrics.CaptureLog.Via.POPUP)
             PaymentCheck.cancelNotification(this@GPayScreenReader, id)
         }
     }
 
-    /** True if any on-screen GPay window is the PIN screen. Same window lookup as events. */
+    /** True if any on-screen GPay / PhonePe window is the PIN screen. Same window lookup as events. */
     private suspend fun isPinScreenShowing(): Boolean = withContext(Dispatchers.Main) {
-        gpayRoots().any { root ->
+        rootsOf(WATCHED.keys).any { root ->
             val texts = mutableListOf<String>()
             collectTexts(root, texts, IntArray(2), depth = 0)
             UpiPinScreenParser.parse(texts) != null
         }
     }
 
-    private fun gpayRoots(): List<AccessibilityNodeInfo> =
-        windows.mapNotNull { it.root }.filter { it.packageName == GPAY_PACKAGE }
-            .ifEmpty { listOfNotNull(rootInActiveWindow?.takeIf { it.packageName == GPAY_PACKAGE }) }
+    private fun rootsOf(packages: Set<String>): List<AccessibilityNodeInfo> =
+        windows.mapNotNull { it.root }.filter { it.packageName?.toString() in packages }
+            .ifEmpty { listOfNotNull(rootInActiveWindow?.takeIf { it.packageName?.toString() in packages }) }
 
-    private fun onPinScreen(amountText: String, payee: String) {
+    private fun onPinScreen(amountText: String, payee: String, app: String) {
         if (attempt?.isActive == true) return // same PIN session: still waiting for it to close
+        // Started from our own Scan & Pay: that flow already saved it and will ask on return.
+        if (com.yourteam.expensetracker.data.ScanPayState.handingOff(this)) return
         attempt = scope.launch {
             val now = System.currentTimeMillis()
             // An unanswered attempt to the same payee and amount in the last 10 min is the same
@@ -196,7 +218,7 @@ class GPayScreenReader : AccessibilityService() {
             val id = again?.id ?: pendingDao.insert(
                 PendingPayment(
                     dedupeKey = "pin|$amountText|${payee.lowercase()}|$now", // unique per attempt
-                    appName = "GPay",
+                    appName = app,
                     amountText = amountText,
                     payee = payee,
                     detectedAt = now,
@@ -238,6 +260,11 @@ class GPayScreenReader : AccessibilityService() {
 
     companion object {
         const val GPAY_PACKAGE = "com.google.android.apps.nbu.paisa.user"
+        const val PHONEPE_PACKAGE = "com.phonepe.app"
+        /** Apps whose PIN screen we watch, with the name saved on the payment. Must match the XML config. */
+        // GPay is not watched: it refuses to pay while a screen reader can see it ("disable accessibility
+        // permission … to continue safely"), so GPay payments come from SMS, alerts and Scan & Pay.
+        val WATCHED = mapOf(PHONEPE_PACKAGE to "PhonePe", "com.naviapp" to "Navi", "net.one97.paytm" to "Paytm")
         private const val TAG = "GPayScan"
         private const val POPUP_DELAY_MS = 2_000L // after the PIN screen closes; GPay's success animation is ~2 s
 

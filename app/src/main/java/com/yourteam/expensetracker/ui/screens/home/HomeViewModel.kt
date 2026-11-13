@@ -13,6 +13,9 @@ import com.yourteam.expensetracker.insights.RangePreset
 import com.yourteam.expensetracker.insights.ToCheck
 import com.yourteam.expensetracker.ui.screens.PaymentRowModel
 import com.yourteam.expensetracker.ui.screens.paymentRow
+import com.yourteam.expensetracker.ui.screens.receivedRow
+import com.yourteam.expensetracker.insights.Received
+import com.yourteam.expensetracker.insights.ReceivedTotal
 import com.yourteam.expensetracker.insights.PeriodSpend
 import com.yourteam.expensetracker.insights.Spending
 import com.yourteam.expensetracker.ui.screens.FeedItem
@@ -35,7 +38,9 @@ sealed interface HomeUiState {
         val spend: PeriodSpend,
         /** "To check · 4 · ₹553". Hidden when count is 0. */
         val toCheck: ToCheck,
-        /** Latest 5 payments for the "Payments ›" list; the full list is one tap away. */
+        /** "Received today · 2 · +₹400" for the same days as the hero. Never part of [spend]. */
+        val received: ReceivedTotal,
+        /** Latest 10 transactions (out and in) for Home's Transactions; the full list is one tap away. */
         val recent: List<PaymentRowModel>,
         /** Category cards for "Categories ›", biggest first. */
         val categories: List<CategorySpend>,
@@ -44,12 +49,17 @@ sealed interface HomeUiState {
         val needsAnswerCount: Int,
         val otherCount: Int,
         val refreshing: Boolean = false,
+        /** Feature 3 (bd10): this month's budget, when one is set. Home then leads with "Left this month". */
+        val budget: com.yourteam.expensetracker.insights.BudgetStatus? = null,
+        /** With a budget: the latest payments this month (the hero covers the month, not the chosen dates). */
+        val monthRecent: List<PaymentRowModel> = emptyList(),
     ) : HomeUiState
 }
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = PaymentRepository.get(app)
+    private val budgets = com.yourteam.expensetracker.data.BudgetStore.get(app).also { it.ensureMonth(LocalDate.now()) }
 
     /** Chosen on the date sheet. Presets are re-worked out from today on every build. */
     private val range = MutableStateFlow(DateRange.of(RangePreset.THIS_WEEK, LocalDate.now()))
@@ -59,7 +69,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private var switchJob: Job? = null
 
     val state: StateFlow<HomeUiState> =
-        combine(repo.snapshot, repo.refreshing, range, switching) { snap, refreshing, r, busy ->
+        combine(repo.snapshot, repo.refreshing, range, switching, budgets.budgets) { snap, refreshing, r, busy, _ ->
             if (busy) HomeUiState.Loading else snap?.let { build(it, refreshing, r) } ?: HomeUiState.Loading
         }.stateIn(
             viewModelScope,
@@ -91,13 +101,13 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissPending(id: Long) = PaymentActions.answer(repo, id, yes = false)
 
-    /** The + button: a payment typed in by hand. */
-    fun addPayment(paise: Long, payee: String, at: Long, category: String?) =
-        PaymentActions.addManual(repo, paise, payee, at, category)
+    /** The + button: money out or in typed in by hand, from a bank account or cash. */
+    fun addPayment(paise: Long, payee: String, at: Long, category: String?, moneyIn: Boolean, cash: Boolean) =
+        PaymentActions.addManual(repo, paise, payee, at, category, moneyIn, cash)
 
     /** Tag the payment behind [key] (and others to the same payee). */
-    fun setCategory(key: String, category: String) {
-        PaymentActions.categorise(repo, key, category)
+    fun setCategory(key: String, category: String, onlyThis: Boolean = false) {
+        PaymentActions.categorise(repo, key, category, onlyThis)
     }
 
     private fun build(snap: PaymentSnapshot, refreshing: Boolean, chosen: DateRange): HomeUiState.Loaded {
@@ -119,13 +129,24 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         return HomeUiState.Loaded(
             spend = Spending.periodSpend(snap.payments, r, today),
             toCheck = Spending.toCheck(snap.payments),
-            recent = Spending.paymentsIn(snap.payments, r, today).take(5).map { paymentRow(it, snap) }, // same dates as the totals
+            received = Received.total(snap.received, r, today),
+            // Same dates as the totals. Money received is listed (+₹, "Received") but never in the hero total.
+            recent = (Spending.paymentsIn(snap.payments, r, today).map { paymentRow(it, snap) } +
+                Received.inRange(snap.received, r, today).map { receivedRow(it, snap) })
+                .sortedByDescending { it.at }.take(10),
             categories = Spending.byCategory(snap.payments, r, today, snap::categoryOf),
             items = (paymentItems + otherSms + received).sortedByDescending { it.dateMillis },
             paymentCount = snap.payments.size,
             needsAnswerCount = snap.payments.count { it.needsAnswer },
             otherCount = otherSms.size + received.size,
             refreshing = refreshing,
+            budget = budgets.budgetFor(java.time.YearMonth.from(today))?.let { budgets.statusFor(snap, it, today) },
+            // Money out and money in this month, newest first (Home's Transactions).
+            monthRecent = DateRange.of(RangePreset.THIS_MONTH, today).let { m ->
+                (Spending.paymentsIn(snap.payments, m, today).map { paymentRow(it, snap) } +
+                    Received.inRange(snap.received, m, today).map { receivedRow(it, snap) })
+                    .sortedByDescending { it.at }.take(10)
+            },
         )
     }
 }

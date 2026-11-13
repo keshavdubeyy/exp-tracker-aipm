@@ -19,9 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -160,7 +157,7 @@ fun FeedbackHost(modifier: Modifier = Modifier) {
                 .heightIn(min = 44.dp),
         ) {
             Icon(
-                if (failed) Icons.Filled.Warning else Icons.Filled.CheckCircle,
+                if (failed) com.yourteam.expensetracker.ui.theme.HugeIcons.Alert else com.yourteam.expensetracker.ui.theme.HugeIcons.CheckCircle,
                 contentDescription = null, // the words carry the meaning
                 tint = if (failed) Negative else Positive,
                 modifier = Modifier.size(20.dp),

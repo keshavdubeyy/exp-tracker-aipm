@@ -18,8 +18,14 @@ data class SmsMessage(
 
 class SmsReader(private val context: Context) {
 
-    /** Reads content://sms/inbox, newest first. Caller must hold READ_SMS. */
-    suspend fun readInbox(): List<SmsMessage> = read(selection = null, args = null)
+    /**
+     * Reads content://sms/inbox from the last [days] days, newest first (MVP M2: 90 days, never the whole
+     * inbox, which can hold years of payments). Caller must hold READ_SMS.
+     */
+    suspend fun readInbox(days: Long): List<SmsMessage> {
+        val from = System.currentTimeMillis() - days * 86_400_000L
+        return read("${Telephony.Sms.DATE} >= ?", arrayOf(from.toString()))
+    }
 
     /** Messages received between [from] and [to] (epoch millis), newest first. */
     suspend fun readBetween(from: Long, to: Long): List<SmsMessage> =

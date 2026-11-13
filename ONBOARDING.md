@@ -18,6 +18,9 @@ ob1 Welcome ──Get started──▶ ob2 SMS explainer ──Allow──▶ (A
                                          ob3 Importing + notif card   denied once → stay on ob2 (can retry)
                                                      │                denied permanently → ob8 SMS denied
                                                      ▼
+                                         ob3b Sort past payments ──Sort the rest──▶ one payee at a time
+                                                     │ Skip                              │ done / Skip the rest
+                                                     ▼                                   ▼
                                          ob4 First look
                                                      ▼
                                          ob5 Catch more (optional) ──Turn on──▶ ob6 explainer sheet ──▶ Settings
@@ -28,7 +31,7 @@ ob1 Welcome ──Get started──▶ ob2 SMS explainer ──Allow──▶ (A
                                                    Home
 ```
 
-Progress dots: ob2 = step 1, ob3–ob4 = step 2, ob5 = step 3. ob1 has none.
+Progress dots: ob2 = step 1, ob3–ob4 (incl. ob3b) = step 2, ob5 = step 3. ob1 has none.
 
 ---
 
@@ -81,6 +84,18 @@ Progress dots: ob2 = step 1, ob3–ob4 = step 2, ob5 = step 3. ob1 has none.
 - If the import finishes in under 1.5 s, still show the screen for 1.5 s so the count is readable.
 - **0 payments found** → replace the count with "No bank payment messages found in the last 90 days" and offer **Continue anyway**. ("Upload a bank statement instead" is parked in MVP.md §5; hidden until built.)
 - Error → "Something went wrong reading messages" + **Try again**.
+
+### ob3b · Sort past payments
+The inbox found at setup is sorted the same way as new payments (Feature 1 §3.2, MVP M8 + M10). Counts come from `insights/PastSort.kt`; the AI only picks categories.
+
+| Phase | Copy / behaviour |
+|---|---|
+| Working (only when AI is on) | "Sorting your payments", "{asked} of {total}" payees checked by AI, progress bar. The app asks the AI about **every** payee the rules couldn't place, 10 at a time, until none are left. Only payee name, UPI ID, amount, hour and method are sent, never the SMS. Disabled "Sorting…" button; "Skip this step" link. |
+| Result | "Sorted on their own" + "{sorted} of {total}" + "past payments have a category, {N} of them by AI". Card: up to 6 sorted payees (name, category · N payments · Known shop / From its name / AI) + "and N more payees". Red dot line "**N payments** to M payees need you…" when any are left. |
+| Result buttons | Some left: **Sort the rest now** + "Skip, I'll do it later" → ob4. None left: **Continue** → ob4. |
+| Sort the rest | One payee per screen, most payments first: "3 of 9", payee, "N payments · ₹X · last on 4 Nov", "AI suggests" (or "Suggested") with its top 3, "Something else" → all categories. Picking saves it as the payee's default (all their past and future payments); a payment with no payee name changes only itself. "Skip this one" / "Skip the rest". Finishing the list → ob4. |
+
+Only "Sure" answers are filed on their own; "Fairly sure" ones are offered here as suggestions. Skipped payees stay "Add category" in Review. Feeds the dashboard group *Smart categorisation › History at install* (`past_sorted`, `past_sorted_auto`, `past_sorted_ai`).
 
 ### ob4 · First look
 | Element | Copy / behaviour |
@@ -166,8 +181,9 @@ Shown from the ob6 link, **and automatically** if the user returns from Settings
 | `notif_asked` | true once the notifications card was answered (don't show again) |
 | `extras_attempted_gpay` / `extras_attempted_listener` | used to auto-show ob7 after a failed attempt |
 | `import_last_run_at` | for re-scan logic (M3) |
+| `sort_done` | true once ob3b was finished or skipped |
 
-If the app is killed mid-onboarding, resume at the first unfinished step: no SMS → ob2; SMS but import not done → ob3; import done → ob4.
+If the app is killed mid-onboarding, resume at the first unfinished step: no SMS → ob2; SMS but import not done → ob3; import done but sort not done → ob3b; else → ob4.
 
 ---
 
@@ -181,6 +197,9 @@ If the app is killed mid-onboarding, resume at the first unfinished step: no SMS
 | F31 | Notifications allowed / Not now | Card disappears | Tick |
 | F32 | Extra source turned on (detected on return) | Card shows "✓ On" | Confirm |
 | F33 | Returned from Settings, source still off | Card unchanged; ob7 auto-shown on Android 13+ after one attempt | none |
+| F35 | Sort past payments: AI finished | Count stops, results show | Confirm |
+| F36 | Sort past payments: category picked | 1.2 s loading on the row, then "Saved. Future payments to X will be Y" + Undo, next payee | Confirm |
+| F37 | Sort past payments: Skip / Sort the rest / Something else | Moves on | Tick |
 | F34 | Onboarding complete | Home appears (skeleton if still loading) | none |
 
 ---
@@ -203,9 +222,11 @@ Log on-device (no personal data): `ob_started`, `sms_explainer_shown`, `sms_gran
 
 ## 8. Acceptance checks
 
-- [ ] Fresh install: Welcome → SMS → Import → First look → Extras → Home works with only SMS granted.
+- [ ] Fresh install: Welcome → SMS → Import → Sort past payments → First look → Extras → Home works with only SMS granted.
 - [ ] Denying SMS once keeps the user on ob2; denying permanently opens ob8; granting in Settings returns to ob3 automatically.
 - [ ] Notifications card appears only on Android 13+ and only once.
+- [ ] ob3b: with AI on, every payee rules can't place is asked (not just 10); only Sure answers are filed; Skip at any point goes to ob4 and the rest stay in Review.
+- [ ] ob3b: picking a category for a payee files all their past payments at once.
 - [ ] ob4 shows real numbers from the import; hides the "needs a category" line when 0.
 - [ ] 0 payments imported shows the empty variant (statement upload parked).
 - [ ] Turning on either extra and returning updates its card to "✓ On" without restarting the app.

@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -102,7 +99,7 @@ private fun PeriodSwitcher(label: String, onClick: () -> Unit) {
         Text(label, style = AppType.tab, color = TextSecondary)
         Spacer(Modifier.width(6.dp))
         Icon(
-            imageVector = Icons.Filled.KeyboardArrowDown,
+            imageVector = com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronDown,
             contentDescription = null,
             tint = TextSecondary,
             modifier = Modifier.size(22.dp),

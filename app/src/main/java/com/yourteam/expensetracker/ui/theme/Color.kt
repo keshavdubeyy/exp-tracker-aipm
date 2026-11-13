@@ -22,6 +22,7 @@ data class AppColors(
     val onAccent: Color,      // text and icons on accent
     val positive: Color,      // spent less, all matched (always with words)
     val negative: Color,      // spent more, money to check (always with words)
+    val warning: Color,       // budget 90–99% used (Feature 3), always with words
     val isDark: Boolean,
 )
 
@@ -35,6 +36,7 @@ val DarkColors = AppColors(
     onAccent = Color(0xFF0B0B0D),
     positive = Color(0xFF3DD68C),
     negative = Color(0xFFFF6B6B),
+    warning = Color(0xFFFFB547),
     isDark = true,
 )
 
@@ -52,6 +54,7 @@ val LightColors = AppColors(
     onAccent = Color(0xFFFFFFFF),
     positive = Color(0xFF0F7040),
     negative = Color(0xFFC62828),
+    warning = Color(0xFF8A5A00),
     isDark = false,
 )
 
@@ -69,6 +72,7 @@ val Accent: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current
 val OnAccent: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.onAccent
 val Positive: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.positive
 val Negative: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.negative
+val Warning: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning
 
 // Older names, kept so screens not yet restyled still compile. Prefer the tokens above.
 val SoftInk: Color @Composable @ReadOnlyComposable get() = TextSecondary

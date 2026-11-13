@@ -65,6 +65,16 @@ object RangeWords {
         else -> "No payments from ${span(r.start, r.end)}"
     }
 
+    /** Home's received row: "Received today", "Received this week", "Received in October", "Received 3–9 Nov". */
+    fun received(r: DateRange): String = when (r.preset) {
+        RangePreset.TODAY -> "Received today"
+        RangePreset.THIS_WEEK -> "Received this week"
+        RangePreset.THIS_MONTH -> "Received this month"
+        RangePreset.LAST_MONTH -> "Received in ${monthName.format(r.start)}"
+        RangePreset.LAST_7_DAYS -> "Received in the last 7 days"
+        RangePreset.CUSTOM -> "Received ${span(r.start, r.end)}"
+    }
+
     /** True when [r] ends today, so a new payment could still land in it. */
     fun includesToday(r: DateRange, today: LocalDate): Boolean = r.end == today
 }

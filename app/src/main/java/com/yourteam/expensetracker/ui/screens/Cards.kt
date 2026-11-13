@@ -1,6 +1,5 @@
 package com.yourteam.expensetracker.ui.screens
 
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -13,15 +12,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -48,11 +42,16 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.yourteam.expensetracker.categoriser.Categoriser
+import com.yourteam.expensetracker.categoriser.Basis
+import com.yourteam.expensetracker.categoriser.Categories
+import com.yourteam.expensetracker.categoriser.Confidence
+import com.yourteam.expensetracker.insights.BankCredit
 import com.yourteam.expensetracker.insights.Money
 import com.yourteam.expensetracker.insights.Payment
+import com.yourteam.expensetracker.insights.Received
 import com.yourteam.expensetracker.insights.UserAnswer
 import com.yourteam.expensetracker.ui.theme.Accent
+import com.yourteam.expensetracker.ui.theme.AppIcons
 import com.yourteam.expensetracker.ui.theme.AppType
 import com.yourteam.expensetracker.ui.theme.CardShape
 import com.yourteam.expensetracker.ui.theme.Bg
@@ -81,7 +80,7 @@ data class PaymentRowModel(
     val amount: String,
     /** For filters only (amount ranges); never summed here. */
     val paise: Long,
-    /** True = money left the account. Credits will come from bank credit SMS later. */
+    /** True = money left the account; false = money received (bank credit SMS). */
     val debited: Boolean,
     val at: Long,
     /** Waiting for "Did it go through?": the started payment's id. */
@@ -91,9 +90,37 @@ data class PaymentRowModel(
     /** Kept for the detail sheet and later use; not shown on the row. */
     val category: String? = null,
     val source: String = "",
-)
+    /** Top 3 categories to offer when asking (Feature 1 §3.4), most likely first. */
+    val suggestions: List<String> = emptyList(),
+    /** How sure the categoriser is; null for rows that don't need one. */
+    val confidence: Confidence? = null,
+    /** Why we picked it; drives the ✦ marker (shown when the app/AI chose, not the user). */
+    val basis: Basis? = null,
+) {
+    /** True when the category was chosen automatically (rules or AI), so the card shows ✦ (Feature 1 F3). */
+    val aiPicked: Boolean get() = basis == Basis.KNOWN_MERCHANT || basis == Basis.SHOP_WORDS || basis == Basis.AI
+    /** "Fairly sure": not filed, but we have a best guess to confirm (F5). */
+    val fairlySure: Boolean get() = debited && category == null && confidence == Confidence.MEDIUM && suggestions.isNotEmpty()
+    val bestGuess: String? get() = suggestions.firstOrNull()
+}
 
-fun paymentRow(p: Payment, snapshot: PaymentSnapshot): PaymentRowModel = PaymentRowModel(
+/** Money received: "+₹500 · Received", never counted as spending. Income category from [snapshot] (Feature 1 §3.7). */
+fun receivedRow(c: BankCredit, snapshot: PaymentSnapshot? = null): PaymentRowModel = (snapshot?.incomeGuessFor(c)).let { g -> PaymentRowModel(
+    key = c.key,
+    payee = Received.senderOf(c),
+    named = c.from != null,
+    amount = Money.formatAmount(c.paise),
+    paise = c.paise,
+    debited = false,
+    at = c.at,
+    source = c.alsoIn?.let { "${c.source} + $it" } ?: c.source,
+    category = g?.category,
+    suggestions = g?.suggestions.orEmpty(),
+    confidence = g?.confidence,
+    basis = g?.basis,
+) }
+
+fun paymentRow(p: Payment, snapshot: PaymentSnapshot): PaymentRowModel = snapshot.guessFor(p).let { g -> PaymentRowModel(
     key = p.key,
     payee = p.payee?.takeIf(String::isNotBlank) ?: p.sms?.let { "Bank payment" } ?: "Payment",
     named = !p.payee.isNullOrBlank(),
@@ -103,15 +130,19 @@ fun paymentRow(p: Payment, snapshot: PaymentSnapshot): PaymentRowModel = Payment
     at = p.at,
     askId = p.started?.id?.takeIf { p.needsAnswer },
     conflictId = p.started?.id?.takeIf { p.conflict },
-    category = snapshot.categoryOf(p),
+    category = g.category,
+    suggestions = g.suggestions,
+    confidence = g.confidence,
+    basis = g.basis,
     source = when {
         p.sms != null -> "Bank SMS"
-        p.chat != null -> "GPay chat"
+        p.chat != null -> p.chat.source
+        p.started?.cash == true -> "Cash · added by you"
         p.started?.manual == true -> "Added by you"
         p.started?.answer == UserAnswer.YES -> "You confirmed"
-        else -> "GPay"
+        else -> p.started?.app ?: "GPay"
     },
-)
+) }
 
 /**
  * Payment row card: initials · payee over "Category · time" · signed amount.
@@ -141,15 +172,27 @@ fun PaymentCard(
         Column(Modifier.weight(1f)) {
             Text(row.payee, style = AppType.rowTitle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if ((row.debited && row.category != null && row.aiPicked) || row.fairlySure) SparkleMark()
                 when {
-                    !row.debited -> Text("Received", style = AppType.body, color = TextSecondary)
-                    row.category == null -> Text(
+                    !row.debited -> Text(row.category?.let { "Received · $it" } ?: "Received", style = AppType.body, color = TextSecondary, maxLines = 1)
+                    // Sure: filed. ✦ (added above) when the app/AI chose it, plain when the user did.
+                    row.category != null -> Text(row.category, style = AppType.body, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    // Fairly sure: a best guess to confirm (F5), ✦ + "Groceries? Confirm".
+                    row.fairlySure -> Text(
+                        "${row.bestGuess}? Confirm",
+                        style = AppType.body.copy(fontWeight = AppType.rowTitle.fontWeight),
+                        color = Accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false).clip(PillShape).clickable(role = Role.Button, onClick = onAddCategory),
+                    )
+                    // Not sure: no guess.
+                    else -> Text(
                         "Add category",
                         style = AppType.body.copy(fontWeight = AppType.rowTitle.fontWeight),
                         color = Accent,
                         modifier = Modifier.clip(PillShape).clickable(role = Role.Button, onClick = onAddCategory),
                     )
-                    else -> Text(row.category, style = AppType.body, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
                 Text(" · ${relativeTime(row.at, groupedByDay = groupedByDay)}", style = AppType.body, color = TextSecondary, maxLines = 1)
             }
@@ -176,6 +219,13 @@ fun PaymentCard(
     }
 }
 
+/** The ✦ marker shown before an app/AI-chosen category (Feature 1 F3). Accent, sized to the label. */
+@Composable
+private fun SparkleMark() {
+    Icon(AppIcons.Sparkle, contentDescription = "Picked for you", tint = Accent, modifier = Modifier.size(14.dp))
+    Spacer(Modifier.width(5.dp))
+}
+
 /** Card labels ("Food & dining", payee names): 13sp semi-bold. */
 val CardLabel = AppType.rowTitle.copy(fontSize = AppType.body.fontSize, lineHeight = AppType.body.lineHeight)
 
@@ -191,7 +241,7 @@ private fun SheetButton(
     val ink = if (filled) OnAccent else TextPrimary
     Box(
         modifier
-            .height(52.dp)
+            .height(Spacing.button)
             .clip(PillShape)
             .background(if (filled) Accent else SurfaceRaised)
             .clickable(enabled = enabled && !loading, role = Role.Button, onClick = onClick)
@@ -241,7 +291,7 @@ fun SectionHeader(title: String, onClick: (() -> Unit)? = null) {
         Text(title, style = AppType.sectionTitle, color = TextPrimary)
         if (onClick != null) {
             Spacer(Modifier.width(4.dp))
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(28.dp))
+            Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronRight, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -307,34 +357,35 @@ fun Chip(text: String, accent: Boolean = false) {
     )
 }
 
-/** Pinned bottom bar: "Ask about your spending" + the round + button to add a payment (DESIGN.md §4.8). */
+/**
+ * Home's floating buttons, bottom right: the round + to add a payment by hand and (when [onScan]
+ * is set) the accent Scan & Pay button (DESIGN.md §4.8, MVP M7).
+ */
 @Composable
-fun AskAndAddBar(onAsk: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .weight(1f)
-                .height(Spacing.scanButton)
-                .clip(PillShape)
-                .background(Surface)
-                .clickable(role = Role.Button, onClick = onAsk)
-                .padding(horizontal = 20.dp),
-        ) {
-            Icon(Icons.Filled.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(12.dp))
-            Text("Ask about your spending", style = AppType.body, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Spacer(Modifier.width(12.dp))
+fun AddAndScanButtons(onAdd: () -> Unit, modifier: Modifier = Modifier, onScan: (() -> Unit)? = null) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
                 .size(Spacing.scanButton)
                 .clip(PillShape)
-                .background(Accent)
+                .background(if (onScan != null) Surface else Accent)
                 .clickable(role = Role.Button, onClick = onAdd),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add a payment", tint = OnAccent, modifier = Modifier.size(28.dp))
+            Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Add, contentDescription = "Add a payment", tint = if (onScan != null) TextPrimary else OnAccent, modifier = Modifier.size(28.dp))
+        }
+        if (onScan != null) {
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier
+                    .size(Spacing.scanButton)
+                    .clip(PillShape)
+                    .background(Accent)
+                    .clickable(role = Role.Button, onClick = onScan),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(com.yourteam.expensetracker.ui.theme.AppIcons.Scan, contentDescription = "Scan and pay", tint = OnAccent, modifier = Modifier.size(26.dp))
+            }
         }
     }
 }
@@ -370,7 +421,7 @@ fun SubScreenHeader(title: String, onBack: () -> Unit) {
             Modifier.size(Spacing.circle).clip(PillShape).background(Surface).clickable(role = Role.Button, onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(24.dp))
+            Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
         Text(title, style = AppType.sectionTitle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -378,20 +429,21 @@ fun SubScreenHeader(title: String, onBack: () -> Unit) {
 }
 
 /**
- * Category picker that slides up from the bottom. Works through [queue] one payment at a time:
- * tap a category to tag it (and every payment to the same payee), or Skip.
+ * "What was this payment for?" sheet (Feature 1 §3.4). Works through [queue] one payment at a
+ * time: one tap on a suggestion saves it (and learns it for the payee), or Skip.
  */
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategorySheet(
     queue: List<PaymentRowModel>,
-    onPick: (PaymentRowModel, String) -> Unit,
+    onPick: (row: PaymentRowModel, category: String, onlyThis: Boolean) -> Unit,
     onDismiss: () -> Unit,
-    extras: List<String> = emptyList(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var index by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    /** True while the chooser is on a sub-page (All categories / New), which shows its own title. */
+    var chooserSub by remember { androidx.compose.runtime.mutableStateOf(false) }
     fun close() = scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
     val row = queue.getOrNull(index)
     if (row == null) { androidx.compose.runtime.LaunchedEffect(Unit) { onDismiss() }; return }
@@ -400,35 +452,37 @@ fun CategorySheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Surface, dragHandle = null) {
         Column(Modifier.padding(horizontal = Spacing.screen, vertical = 20.dp).navigationBarsPadding()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    if (queue.size > 1) Text("${index + 1} of ${queue.size}", style = AppType.chip, color = TextSecondary)
-                    Text("Add a category", style = AppType.sectionTitle, color = TextPrimary)
+                // On a chooser sub-page the inner header carries the title; keep only the close button here.
+                if (!chooserSub) {
+                    Column(Modifier.weight(1f)) {
+                        if (queue.size > 1) Text("${index + 1} of ${queue.size}", style = AppType.chip, color = TextSecondary)
+                        Text(if (row.debited) "What was this payment for?" else "What was this money for?", style = AppType.sectionTitle, color = TextPrimary)
+                    }
+                } else {
+                    Spacer(Modifier.weight(1f))
                 }
                 Box(
                     Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised).clickable(role = Role.Button) { close() },
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
+                ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
             }
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                InitialsCircle(row.payee)
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(row.payee, style = AppType.rowTitle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(relativeTime(row.at), style = AppType.body, color = TextSecondary)
+            if (!chooserSub) {
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    InitialsCircle(row.payee)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (row.debited) "Paid to ${row.payee}" else "From ${row.payee}", style = AppType.rowTitle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(relativeTime(row.at), style = AppType.body, color = TextSecondary)
+                    }
+                    Text(if (row.debited) "\u2212${row.amount}" else "+${row.amount}", style = AppType.rowTitle, color = TextPrimary)
                 }
-                Text("\u2212${row.amount}", style = AppType.rowTitle, color = TextPrimary)
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(if (chooserSub) 12.dp else 20.dp))
             androidx.compose.runtime.key(row.key) {
-                CategoryPicker(
-                    current = null,
-                    extras = extras,
-                    confirmLabel = if (index + 1 < queue.size) "Save and next" else "Save category",
-                    note = if (row.named) "We'll use this for every payment to ${row.payee}." else "This payment has no name, so it's tagged on its own.",
-                ) { c -> onPick(row, c); next() }
+                CategoryChooser(row, onSubPageChange = { chooserSub = it }) { c, onlyThis -> onPick(row, c, onlyThis); next() }
             }
-            if (queue.size > 1) {
+            if (!chooserSub && queue.size > 1) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     "Skip",
@@ -437,107 +491,6 @@ fun CategorySheet(
                     modifier = Modifier.heightIn(min = Spacing.circle).clip(PillShape).clickable(role = Role.Button) { next() }.padding(horizontal = 4.dp, vertical = 12.dp),
                 )
             }
-        }
-    }
-}
-
-/**
- * Category picker with a confirm step: tapping a pill only selects it (accent fill); the primary
- * button below saves it. [extras] are names the user wrote before. "Other" asks the user to write
- * what it was, and that text becomes the category.
- */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-fun CategoryPicker(
-    current: String?,
-    extras: List<String> = emptyList(),
-    confirmLabel: String = "Update category",
-    note: String? = null,
-    onConfirm: (String) -> Unit,
-) {
-    var choice by remember(current) { androidx.compose.runtime.mutableStateOf(current) }
-    var writing by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var text by remember { androidx.compose.runtime.mutableStateOf("") }
-    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
-    val choices = (Categoriser.all - Categoriser.OTHER) + extras.filter { it !in Categoriser.all }.distinct() + Categoriser.OTHER
-    val result: String? = if (writing) text.trim().take(30).replaceFirstChar(Char::uppercase).ifEmpty { null } else choice
-    val canSave = result != null && result != current
-    val scope = rememberCoroutineScope()
-    var saving by remember { androidx.compose.runtime.mutableStateOf(false) }
-    fun save() {
-        if (!canSave || saving) return
-        val picked = result!!
-        saving = true
-        scope.launch { delay(ACTION_DELAY_MS); onConfirm(picked) }
-    }
-
-    Column {
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-        ) {
-            choices.forEach { c ->
-                val on = if (c == Categoriser.OTHER) writing else c == choice && !writing
-                Text(
-                    c,
-                    style = AppType.tab,
-                    color = if (on) OnAccent else TextPrimary,
-                    modifier = Modifier
-                        .heightIn(min = Spacing.circle)
-                        .clip(PillShape)
-                        .background(if (on) Accent else SurfaceRaised)
-                        .clickable(role = Role.RadioButton) {
-                            if (c == Categoriser.OTHER) writing = true else { writing = false; choice = c }
-                        }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            }
-        }
-
-        androidx.compose.animation.AnimatedVisibility(writing) {
-            Column(Modifier.padding(top = 16.dp)) {
-                Text("What was it for?", style = AppType.rowTitle, color = TextPrimary)
-                Spacer(Modifier.height(8.dp))
-                Box(
-                    Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(PillShape).background(SurfaceRaised).padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (text.isEmpty()) Text("e.g. Gifts, Haircut, Gym", style = AppType.body, color = TextSecondary)
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = text,
-                        onValueChange = { text = it.take(30) },
-                        singleLine = true,
-                        textStyle = AppType.body.copy(color = TextPrimary),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Accent),
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
-                        ),
-                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save() }),
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                    )
-                }
-                androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
-            }
-        }
-
-        note?.let {
-            Spacer(Modifier.height(12.dp))
-            Text(it, style = AppType.body, color = TextSecondary)
-        }
-        Spacer(Modifier.height(16.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(PillShape)
-                .background(if (canSave) Accent else SurfaceRaised)
-                .clickable(enabled = canSave && !saving, role = Role.Button) { save() }
-                .semantics { if (saving) stateDescription = "Saving" },
-            contentAlignment = Alignment.Center,
-        ) {
-            if (saving) ButtonSpinner(OnAccent)
-            else Text(confirmLabel, style = AppType.tab, color = if (canSave) OnAccent else TextSecondary)
         }
     }
 }
@@ -553,15 +506,16 @@ private val fullWhen = DateTimeFormatter.ofPattern("EEE d MMM, h:mm a")
 @Composable
 fun PaymentSheet(
     row: PaymentRowModel,
-    onPickCategory: (String) -> Unit,
+    onPickCategory: (category: String, onlyThis: Boolean) -> Unit,
     onAnswer: (id: Long, yes: Boolean) -> Unit,
     onOpenDetails: () -> Unit,
     onDismiss: () -> Unit,
-    extras: List<String> = emptyList(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var picking by remember { androidx.compose.runtime.mutableStateOf(false) }
+    /** True while the chooser is on a sub-page (All categories / New), which shows its own title. */
+    var chooserSub by remember { androidx.compose.runtime.mutableStateOf(false) }
     /** Which answer button is loading, if any. */
     var busy by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     fun close(then: () -> Unit = {}) = scope.launch { sheetState.hide() }.invokeOnCompletion { then(); onDismiss() }
@@ -576,11 +530,12 @@ fun PaymentSheet(
         Column(Modifier.padding(horizontal = Spacing.screen, vertical = 20.dp).navigationBarsPadding()) {
             // Top row: back (while picking) and close.
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (picking) {
+                // On a chooser sub-page the inner header carries the title and back, so collapse this one.
+                if (picking && !chooserSub) {
                     Box(
                         Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised).clickable(role = Role.Button) { picking = false },
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(22.dp)) }
+                    ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronLeft, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(22.dp)) }
                     Spacer(Modifier.width(14.dp))
                     Text(if (row.category == null) "Add category" else "Change category", style = AppType.sectionTitle, color = TextPrimary, modifier = Modifier.weight(1f))
                 } else {
@@ -589,7 +544,7 @@ fun PaymentSheet(
                 Box(
                     Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised).clickable(role = Role.Button) { close() },
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
+                ) { Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
             }
 
             androidx.compose.animation.AnimatedContent(
@@ -604,12 +559,7 @@ fun PaymentSheet(
             ) { isPicking ->
                 if (isPicking) {
                     Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                        CategoryPicker(
-                            current = row.category,
-                            extras = extras,
-                            confirmLabel = if (row.category == null) "Add category" else "Update category",
-                            note = if (row.named) "Changes every payment to ${row.payee}." else "This payment has no name, so only this one changes.",
-                        ) { c -> close { onPickCategory(c) } } // the picker already showed its loading step
+                        CategoryChooser(row, onSubPageChange = { chooserSub = it }) { c, onlyThis -> close { onPickCategory(c, onlyThis) } } // the chooser already showed its loading step
                     }
                 } else {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -629,7 +579,7 @@ fun PaymentSheet(
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                            Chip(row.category ?: "No category", accent = false)
+                            Chip(if (!row.debited) row.category?.let { "Received · $it" } ?: "Received" else row.category ?: "No category", accent = false)
                             if (row.source.isNotEmpty()) Chip(row.source)
                         }
                         Spacer(Modifier.height(Spacing.section))
@@ -637,7 +587,7 @@ fun PaymentSheet(
                             Text("Did it go through?", style = AppType.sectionTitle, color = TextPrimary)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "You started this in GPay, but no bank SMS or GPay record has confirmed it yet.",
+                                "You started this in ${row.source.ifEmpty { "your UPI app" }}, but no bank SMS or app record has confirmed it yet.",
                                 style = AppType.body,
                                 color = TextSecondary,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -663,12 +613,12 @@ fun PaymentSheet(
                             SheetButton("It was paid", filled = true, Modifier.fillMaxWidth(), loading = busy == "paid", enabled = busy == null) { answer("paid", id, true) }
                             Spacer(Modifier.height(Spacing.cardGap))
                         }
-                        // Secondary, not primary: raised fill, normal text.
+                        // Secondary, not primary: raised fill, normal text. Money received gets an income category.
                         SheetButton(if (row.category == null) "Add category" else "Change category", filled = false, Modifier.fillMaxWidth(), enabled = busy == null) {
                             picking = true
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text(
+                        if (row.debited) Text(
                             "See how we know",
                             style = AppType.tab,
                             color = Accent,

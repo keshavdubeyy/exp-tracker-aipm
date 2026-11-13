@@ -20,6 +20,15 @@ The build sent is **fast**: optimised like a release, signed with the debug key,
    # firebase.testers=a@example.com,b@example.com
    ```
 6. **Sign in once:** `firebase login` (opens the browser).
+7. **Turn on the in-app update prompt.** Tester builds check Firebase when the app opens and show *New version available* → install in place.
+   - *Project settings* → *General*: copy the **Project ID** and the **Web API key**.
+   - Turn on the **Firebase App Testers API** for the project: [console.cloud.google.com/apis/library/firebaseapptesters.googleapis.com](https://console.cloud.google.com/apis/library/firebaseapptesters.googleapis.com) (pick your project → *Enable*).
+   - Add to `local.properties` next to `firebase.appId`:
+     ```properties
+     firebase.projectId=your-project-id
+     firebase.apiKey=AIza…
+     ```
+   Without these the app simply never checks. The check runs at most every 6 hours, only after onboarding, and only in the **fast** build (the one this script sends).
 
 ## Sending a build
 
@@ -40,6 +49,9 @@ The script builds the APK with a new version number (so it installs as an update
 2. Follow the link on your Android phone and install the **App Tester** app when asked. It lists builds and tells you about updates.
 3. Download *Expense Tracker*. Allow "Install unknown apps" for App Tester when Android asks.
 
+**Updates**
+From this build on, the app tells you when there's a newer version: open it and tap **Update** on the *New version available* box. The first time, it asks you to sign in with the Google account the invite was sent to (once only). If you tap *Not now*, it asks again after a few hours.
+
 **One extra step (Android 13 and newer)**
 Android blocks some settings for apps installed outside the Play Store. Before turning on notification access or the accessibility setting:
 > Settings → Apps → Expense Tracker → ⋮ (top right) → **Allow restricted settings**
@@ -47,7 +59,8 @@ Android blocks some settings for apps installed outside the Play Store. Before t
 Without this, the switches stay greyed out and GPay / PhonePe payments won't be captured.
 
 **Your data**
-The app reads bank payment SMS and UPI app notifications **on your phone only**. Nothing is uploaded. Turn on **Sample data** (bubble at the bottom right) to try every screen with made-up payments.
+The app reads bank payment SMS and UPI app notifications **on your phone only**. Your messages, payee names and amounts are never uploaded.
+If you tap **Share counts** when asked, once a day the app sends the team anonymous counts (for example "30 payments sorted automatically, 27 kept", "app opened on 4 of the last 7 days", "budget set: yes") under a scrambled tester ID that isn't linked to your number or account (it stays the same if you reinstall, so you're counted once). You can see exactly what's sent, or turn it off, in Profile › tap Version 7× › Developer. Turn on **Sample data** (bubble at the bottom right) to try every screen with made-up payments.
 
 **Please try**
 - [ ] First open: grant SMS access, see your payments load (a grey skeleton first)

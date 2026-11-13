@@ -18,10 +18,23 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT), // icons follow system theme
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
+        com.yourteam.expensetracker.notifications.CategoryPrompt.cancelDaily(this)
+        AppUpdates.checkOnOpen(this) // tester builds: "New version available" from Firebase
         setContent {
             ExpenseTrackerTheme {
                 AppRoot()
             }
         }
+    }
+
+    /** A notification tapped while the app is open: keep its "open" extra for [AppRoot]. */
+    override fun onStart() {
+        super.onStart()
+        com.yourteam.expensetracker.metrics.MetricsUpload.onOpen(this) // tester counts stay fresh on the dashboard
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 }

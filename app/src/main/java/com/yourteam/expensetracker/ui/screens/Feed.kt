@@ -62,9 +62,10 @@ data class FeedItem(
 /** Shared Payment -> row mapping, so every screen labels payments the same way. */
 fun paymentItem(p: Payment, snapshot: PaymentSnapshot): FeedItem {
     val chips = buildList {
-        if (p.started?.manual == true) add("Added by you")
+        if (p.started?.cash == true) add("Cash · added by you")
+        else if (p.started?.manual == true) add("Added by you")
         else if (p.started?.answer == UserAnswer.YES) add("You confirmed")
-        if (p.chat != null) add("GPay chat")
+        p.chat?.let { add(it.source) }
         if (p.sms != null) add("Bank SMS")
         if (p.needsAnswer) add("Waiting for you")
     }

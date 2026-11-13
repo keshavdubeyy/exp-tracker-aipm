@@ -38,7 +38,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.yourteam.expensetracker.notifications.GPayScreenReader
+import com.yourteam.expensetracker.notifications.PinScreenWatcher
 import com.yourteam.expensetracker.notifications.PaymentCheck
 import com.yourteam.expensetracker.notifications.UpiApps
 import com.yourteam.expensetracker.ui.screens.Chip
@@ -62,7 +62,7 @@ fun SourcesScreen(modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) } // bump to re-read every status
     LifecycleResumeEffect(Unit) { tick++; onPauseOrDispose { } }
-    val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
+    val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
     val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
 
     val sources = remember(tick) {
@@ -70,9 +70,9 @@ fun SourcesScreen(modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
             Source(
                 "Bank SMS",
                 "Reads payment messages from your bank. OTPs and offers are skipped.",
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED,
+                com.yourteam.expensetracker.ui.screens.onboarding.Onboarding.hasSms(context),
                 "Allow SMS",
-            ) { smsLauncher.launch(Manifest.permission.READ_SMS) },
+            ) { smsLauncher.launch(com.yourteam.expensetracker.ui.screens.onboarding.Onboarding.SMS_PERMISSIONS) },
             Source(
                 "UPI app alerts",
                 "Saves payment notifications from GPay, PhonePe, Paytm, BHIM and CRED. Other apps are ignored.",
@@ -80,12 +80,12 @@ fun SourcesScreen(modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
                 "Turn on",
             ) { context.startActivity(UpiApps.notificationAccessIntent(context)) },
             Source(
-                "Paid here (GPay)",
-                "Catches small GPay payments your bank doesn't text about. Only GPay is read, never your PIN. " +
-                    "In Accessibility, open Downloaded apps → Expense Tracker.",
-                GPayScreenReader.isOn(context),
+                "Payments with no SMS",
+                "Sees only when a UPI app (GPay, PhonePe, Navi, Paytm…) opens its PIN screen. Never the screen, " +
+                    "your PIN or the amount. If no bank SMS or alert follows, we ask once. In Usage access, pick Expense Tracker.",
+                PinScreenWatcher.hasAccess(context),
                 "Turn on",
-            ) { context.startActivity(GPayScreenReader.settingsIntent(context)) },
+            ) { context.startActivity(PinScreenWatcher.settingsIntent()) },
             Source(
                 "\"Did it go through?\"",
                 "One notification when a payment you started isn't recorded anywhere else.",

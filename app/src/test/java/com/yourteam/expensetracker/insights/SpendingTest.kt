@@ -188,4 +188,9 @@ class SpendingTest {
         assertEquals(listOf(100L, 200L), got.map { it.paise }) // 3–9 Nov, waiting ones included
         assertEquals(emptyList<Long>(), Spending.paymentsIn(list, DateRange.custom(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5)), today, zone).map { it.paise })
     }
+
+    @Test fun trackedRupeesSkipsWaitingAndRoundsDown() {
+        val list = listOf(sms(12_050, 1), sms(10_099, 2), waiting(50_000, 3))
+        assertEquals(221L, Spending.trackedRupees(list)) // ₹120.50 + ₹100.99, the waiting ₹500 not counted
+    }
 }

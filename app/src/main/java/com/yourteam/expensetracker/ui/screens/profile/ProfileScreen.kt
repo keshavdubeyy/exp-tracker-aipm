@@ -3,6 +3,8 @@ package com.yourteam.expensetracker.ui.screens.profile
 import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,8 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,7 +68,7 @@ class ProfileViewModel(app: Application) : AndroidViewModel(app) {
 
 /** Profile: accounts, settings, privacy. Opened from the avatar on the top tabs. */
 @Composable
-fun ProfileScreen(onBack: () -> Unit, onOpenSources: () -> Unit, viewModel: ProfileViewModel = viewModel()) {
+fun ProfileScreen(onBack: () -> Unit, onOpenSources: () -> Unit, onOpenCategories: () -> Unit = {}, onOpenDeveloper: () -> Unit = {}, onOpenDuplicates: () -> Unit = {}, viewModel: ProfileViewModel = viewModel()) {
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -99,13 +99,34 @@ fun ProfileScreen(onBack: () -> Unit, onOpenSources: () -> Unit, viewModel: Prof
             Spacer(Modifier.height(Spacing.section - Spacing.cardGap))
             Label("Settings")
             LinkRow("Sources", "Bank SMS, UPI alerts, GPay", onOpenSources)
+            Spacer(Modifier.height(Spacing.cardGap))
+            LinkRow("Categories", "Make, rename or delete your own", onOpenCategories)
+            Spacer(Modifier.height(Spacing.cardGap))
+            LinkRow("Duplicates", "Same person or category under different names", onOpenDuplicates)
             Spacer(Modifier.height(Spacing.section))
             Label("Privacy")
             Text(
                 "Your SMS, payments and answers are read and stored only on this phone. " +
-                    "Nothing is uploaded. Account numbers show the last 4 digits only.",
+                    (if (com.yourteam.expensetracker.categoriser.AiCategoriser.enabled)
+                        "To suggest categories, we send a payee's name, UPI ID and amount to our server, never your messages. "
+                    else "Nothing is uploaded. ") +
+                    "Account numbers show the last 4 digits only.",
                 style = AppType.body,
                 color = TextSecondary,
+            )
+            Spacer(Modifier.height(Spacing.section))
+            // Tapping the version 7 times opens the Developer screen (MVP M24).
+            var taps by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+            Text(
+                "Version ${com.yourteam.expensetracker.BuildConfig.VERSION_NAME}",
+                style = AppType.body,
+                color = TextSecondary,
+                modifier = Modifier
+                    .clickable(interactionSource = null, indication = null) {
+                        taps++
+                        if (taps >= 7) { taps = 0; onOpenDeveloper() }
+                    }
+                    .padding(vertical = 12.dp),
             )
         }
     }
@@ -131,6 +152,6 @@ private fun LinkRow(title: String, subtitle: String, onClick: () -> Unit) {
             Text(title, style = AppType.rowTitle, color = TextPrimary)
             Text(subtitle, style = AppType.body, color = TextSecondary)
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
+        Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronRight, contentDescription = null, tint = TextSecondary)
     }
 }

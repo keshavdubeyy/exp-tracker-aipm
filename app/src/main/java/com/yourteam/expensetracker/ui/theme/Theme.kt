@@ -65,13 +65,14 @@ val TagShape = PillShape
 
 /** DESIGN.md §3 spacing, on a 4dp grid. */
 object Spacing {
-    val screen = 20.dp       // screen side padding
+    val screen = 16.dp       // screen side padding
     val section = 22.dp      // gap between sections (DESIGN.md value, off-grid by design)
     val cardGap = 8.dp       // gap between cards in a list
-    val cardH = 20.dp        // card inner padding, horizontal
-    val cardV = 16.dp        // card inner padding, vertical
+    val cardH = 16.dp        // card inner padding, horizontal
+    val cardV = 14.dp        // card inner padding, vertical
     val circle = 44.dp       // icon / avatar circle, minimum touch target
-    val scanButton = 56.dp   // Scan & Pay
+    val scanButton = 52.dp   // Scan & Pay / + floating buttons
+    val button = 48.dp       // every full-width or paired pill button
 }
 
 private val AppShapes = Shapes(

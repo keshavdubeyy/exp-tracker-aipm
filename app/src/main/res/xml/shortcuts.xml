@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan_pay"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scan"
+        android:shortcutShortLabel="@string/scan_pay_short"
+        android:shortcutLongLabel="@string/scan_pay_long">
+        <intent
+            android:action="com.yourteam.expensetracker.SCAN_PAY"
+            android:targetPackage="com.yourteam.expensetracker"
+            android:targetClass="com.yourteam.expensetracker.MainActivity" />
+    </shortcut>
+</shortcuts>

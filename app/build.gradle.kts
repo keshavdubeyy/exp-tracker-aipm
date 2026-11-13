@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
 }
+
+// Backend for the AI categoriser (Feature 1 §3.2). Set in local.properties (never committed):
+//   ai.baseUrl=https://your-server.example.com   (http://10.0.2.2:8000 for the emulator)
+//   ai.testerKey=…                                (same as TESTER_KEY on the server)
+// Empty = AI off: the app still works with rules and learned choices.
+val localProps = Properties().also { props ->
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { props.load(it) }
+}
+fun localProp(name: String) = "\"" + (localProps.getProperty(name) ?: "").replace("\"", "") + "\""
 
 android {
     namespace = "com.yourteam.expensetracker"
@@ -18,6 +29,15 @@ android {
         // Tester uploads pass -PversionCode=… (scripts/distribute.sh) so every build installs as an update.
         versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = "0.1.0"
+        buildConfigField("String", "AI_BASE_URL", localProp("ai.baseUrl"))
+        buildConfigField("String", "AI_TESTER_KEY", localProp("ai.testerKey"))
+        // Tester metrics upload (MVP M24). Defaults to the same server as the AI; empty = no upload.
+        // In-app "Update available" for testers (Firebase App Distribution, fast build only). From local.properties;
+        // empty = no update check. App ID, Web API key and Project ID are in Firebase console → Project settings.
+        buildConfigField("String", "FIREBASE_APP_ID", localProp("firebase.appId"))
+        buildConfigField("String", "FIREBASE_API_KEY", localProp("firebase.apiKey"))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", localProp("firebase.projectId"))
+        buildConfigField("String", "METRICS_BASE_URL", "\"" + (localProps.getProperty("metrics.baseUrl") ?: localProps.getProperty("ai.baseUrl") ?: "").replace("\"", "") + "\"")
     }
 
     buildTypes {
@@ -77,6 +97,13 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.work.runtime.ktx)
+    // Scan & Pay (M7): Google's code scanner. Runs in Play services, needs no camera permission.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    // Tester update prompt: the API is a no-op stub in every build; the full SDK (which can install updates)
+    // goes only into the "fast" build sent through Firebase, never into a release.
+    implementation(libs.firebase.appdistribution.api)
+    add("fastImplementation", libs.firebase.appdistribution)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

@@ -18,8 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -85,18 +85,17 @@ fun ReviewScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val loaded = state as? ReviewUiState.Loaded
     var checking by rememberSaveable { mutableStateOf<String?>(null) }
-    var tagging by remember { mutableStateOf<PaymentRowModel?>(null) }
+    var tagging by remember { mutableStateOf<List<PaymentRowModel>?>(null) }
 
     // Row is re-read from state, so once answered (and gone from Review) the sheet can't reopen.
     loaded?.rows?.firstOrNull { it.key == checking }?.let { row ->
         NeedsCheckSheet(row, onAnswer = viewModel::answer, onDismiss = { checking = null })
     }
-    tagging?.let { row ->
+    tagging?.let { queue ->
         CategorySheet(
-            listOf(row),
-            onPick = { r, c -> viewModel.setCategory(r.key, c) },
+            queue,
+            onPick = { r, c, onlyThis -> viewModel.setCategory(r.key, c, onlyThis) },
             onDismiss = { tagging = null },
-            extras = loaded?.categories.orEmpty(),
         )
     }
 
@@ -109,7 +108,7 @@ fun ReviewScreen(
             item {
                 ReviewHero(s, Modifier.padding(bottom = Spacing.section))
             }
-            if (s.rows.isEmpty()) {
+            if (s.rows.isEmpty() && s.untagged.isEmpty()) {
                 item { CaughtUpCard() }
             }
             section(
@@ -117,7 +116,7 @@ fun ReviewScreen(
                 note = "You started these in GPay, but no bank SMS or GPay record has confirmed them yet.",
                 rows = s.pending,
                 onCheck = { checking = it.key },
-                onTag = { tagging = it },
+                onTag = { tagging = listOf(it) },
             )
             section(
                 title = "The bank disagrees",
@@ -125,7 +124,13 @@ fun ReviewScreen(
                     "If the money comes back later, it shows up as a refund.",
                 rows = s.conflicts,
                 onCheck = { checking = it.key },
-                onTag = { tagging = it },
+                onTag = { tagging = listOf(it) },
+            )
+            untaggedSection(
+                rows = s.untagged,
+                onOpen = { onOpenPayment(it.key) },
+                onTag = { tagging = listOf(it) },
+                onTagAll = { tagging = s.untagged },
             )
         }
     }
@@ -158,7 +163,7 @@ private fun ReviewHero(state: ReviewUiState.Loaded, modifier: Modifier = Modifie
         Spacer(Modifier.height(10.dp))
         if (count == 0) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Check, contentDescription = null, tint = Positive, modifier = Modifier.size(18.dp))
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Tick, contentDescription = null, tint = Positive, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("All caught up", style = AppType.rowTitle, color = Positive)
             }
@@ -207,6 +212,54 @@ private fun LazyListScope.section(
         }
     }
     item(key = "gap-$title") { Spacer(Modifier.height(Spacing.section - Spacing.cardGap)) }
+}
+
+/** How many uncategorised payments Review lists before "Go through all N". */
+private const val UNTAGGED_SHOWN = 10
+
+/**
+ * Needs Review (Feature 1 §3.8): payments we couldn't categorise with confidence. They're
+ * already in every total; adding a category also teaches the payee's default.
+ */
+private fun LazyListScope.untaggedSection(
+    rows: List<PaymentRowModel>,
+    onOpen: (PaymentRowModel) -> Unit,
+    onTag: (PaymentRowModel) -> Unit,
+    onTagAll: () -> Unit,
+) {
+    if (rows.isEmpty()) return
+    item(key = "header-untagged") {
+        Column(Modifier.padding(bottom = Spacing.cardGap)) {
+            Box(Modifier.semantics { heading() }) { SectionHeader(if (rows.size == 1) "1 payment needs a category" else "${rows.size} payments need a category") }
+            Text("Already in your totals. Pick a category once and we'll remember it for that payee.", style = AppType.body, color = TextSecondary)
+            Spacer(Modifier.height(10.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(Spacing.button)
+                    .background(com.yourteam.expensetracker.ui.theme.Accent, PillShape)
+                    .clip(PillShape)
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onTagAll),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (rows.size == 1) "Add a category" else "Go through all ${rows.size}",
+                    style = AppType.tab,
+                    color = com.yourteam.expensetracker.ui.theme.OnAccent,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+    }
+    items(rows.take(UNTAGGED_SHOWN), key = { "untagged-${it.key}" }) { row ->
+        Column(Modifier.animateItem()) {
+            PaymentCard(row, onClick = { onTag(row) }, onAddCategory = { onTag(row) })
+            Spacer(Modifier.height(Spacing.cardGap))
+        }
+    }
+    if (rows.size > UNTAGGED_SHOWN) item(key = "more-untagged") {
+        Text("and ${rows.size - UNTAGGED_SHOWN} more", style = AppType.body, color = TextSecondary, modifier = Modifier.padding(bottom = Spacing.cardGap))
+    }
 }
 
 /** Inline empty state (FEEDBACK.md §2, F3): says what would show up here. */

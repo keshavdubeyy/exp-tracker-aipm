@@ -54,7 +54,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.yourteam.expensetracker.ui.theme.CardShape
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.draw.clip
@@ -81,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.layout.layout
 import com.yourteam.expensetracker.insights.Money
+import com.yourteam.expensetracker.insights.ReceivedTotal
 import com.yourteam.expensetracker.ui.screens.PaymentCard
 import com.yourteam.expensetracker.ui.screens.CategorySheet
 import com.yourteam.expensetracker.ui.screens.PaymentSheet
@@ -96,9 +96,7 @@ import com.yourteam.expensetracker.ui.theme.AppType
 import com.yourteam.expensetracker.ui.theme.TextSecondary
 import com.yourteam.expensetracker.ui.theme.TextPrimary
 import com.yourteam.expensetracker.ui.theme.AppCard
-import com.yourteam.expensetracker.ui.theme.Bg
-import com.yourteam.expensetracker.ui.screens.AskAndAddBar
-import androidx.compose.ui.graphics.Brush
+import com.yourteam.expensetracker.ui.screens.AddAndScanButtons
 import androidx.compose.ui.graphics.Color
 import com.yourteam.expensetracker.ui.theme.Border
 import com.yourteam.expensetracker.ui.theme.Edge
@@ -112,14 +110,19 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
+/** Home-screen shortcut "Scan & Pay" (res/xml/shortcuts.xml) opens the scanner. */
+const val SCAN_PAY_ACTION = "com.yourteam.expensetracker.SCAN_PAY"
+
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenPayment: (String) -> Unit = {},
     onOpenPayments: () -> Unit = {},
+    onOpenReceived: () -> Unit = onOpenPayments,
     onOpenReview: () -> Unit = {},
     onOpenSources: () -> Unit = {},
-    onAsk: () -> Unit = {},
+    onOpenBudgets: () -> Unit = {},
+    onOpenInsights: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -132,7 +135,8 @@ fun HomeScreen(
         canNotify = PaymentCheck.canNotify(context)
     }
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        val ok = result.values.all { it } && hasReadSms(context)
         granted = ok
         if (!ok) deniedOnce = true
     }
@@ -148,7 +152,7 @@ fun HomeScreen(
 
     if (!granted) {
         SmsPermissionScreen(
-            onAllow = { launcher.launch(Manifest.permission.READ_SMS) },
+            onAllow = { launcher.launch(com.yourteam.expensetracker.ui.screens.onboarding.Onboarding.SMS_PERMISSIONS) },
             onOpenSettings = { context.startActivity(appSettingsIntent(context)) },
             showSettingsHint = deniedOnce,
             modifier = modifier,
@@ -163,6 +167,17 @@ fun HomeScreen(
     val range = (state as? HomeUiState.Loaded)?.spend?.range ?: chosenRange
     var showPeriodSheet by rememberSaveable { mutableStateOf(false) }
     var adding by rememberSaveable { mutableStateOf(false) }
+    // Scan & Pay (M7): no button on Home any more; the home-screen shortcut still opens the scanner.
+    var scanKey by remember { mutableStateOf(0) }
+    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    LaunchedEffect(activity?.intent) {
+        if (activity?.intent?.action == SCAN_PAY_ACTION) {
+            activity.intent.action = null
+            scanKey++
+        }
+    }
+    ScanPayHost(scanKey)
+    PinAskHost() // "Did you pay someone in GPay?" when a PIN screen had no SMS or alert after it
 
     if (adding) {
         AddPaymentSheet(onSave = viewModel::addPayment, onDismiss = { adding = false })
@@ -182,7 +197,7 @@ fun HomeScreen(
 
     // Tapping a payment: details + "Change category" in a sheet. Row is re-read so edits show at once.
     // "Needs check": the Pending sheet (MVP M7/M13).
-    (state as? HomeUiState.Loaded)?.recent?.firstOrNull { it.key == checking }?.let { row ->
+    (state as? HomeUiState.Loaded)?.let { it.recent + it.monthRecent }?.firstOrNull { it.key == checking }?.let { row ->
         NeedsCheckSheet(
             row = row,
             onAnswer = { id, yes -> if (yes) viewModel.confirmPending(id) else viewModel.dismissPending(id) },
@@ -190,19 +205,18 @@ fun HomeScreen(
         )
     }
 
-    (state as? HomeUiState.Loaded)?.recent?.firstOrNull { it.key == opened }?.let { row ->
+    (state as? HomeUiState.Loaded)?.let { it.recent + it.monthRecent }?.firstOrNull { it.key == opened }?.let { row ->
         PaymentSheet(
             row = row,
-            onPickCategory = { viewModel.setCategory(row.key, it) },
+            onPickCategory = { c, onlyThis -> viewModel.setCategory(row.key, c, onlyThis) },
             onAnswer = { id, yes -> if (yes) viewModel.confirmPending(id) else viewModel.dismissPending(id) },
             onOpenDetails = { onOpenPayment(row.key) },
             onDismiss = { opened = null },
-            extras = (state as? HomeUiState.Loaded)?.categories?.mapNotNull { it.category }.orEmpty(),
         )
     }
 
     tagging?.let { row ->
-        CategorySheet(listOf(row), onPick = { r, c -> viewModel.setCategory(r.key, c) }, onDismiss = { tagging = null }, extras = (state as? HomeUiState.Loaded)?.categories?.mapNotNull { it.category }.orEmpty())
+        CategorySheet(listOf(row), onPick = { r, c, onlyThis -> viewModel.setCategory(r.key, c, onlyThis) }, onDismiss = { tagging = null })
     }
 
     Box(modifier.fillMaxSize()) {
@@ -221,20 +235,21 @@ fun HomeScreen(
                 onOpenReview = onOpenReview,
                 onOpenPayment = onOpenPayment,
                 onOpenPayments = onOpenPayments,
+                onOpenReceived = onOpenReceived,
                 onCheck = { checking = it.key },
                 onTag = { tagging = it },
                 onOpenSheet = { opened = it },
+                onOpenBudgets = onOpenBudgets,
+                onOpenInsights = onOpenInsights,
             )
         }
     }
-        // Pinned Ask bar + the + button, on a fade so list content slides under it cleanly.
-        AskAndAddBar(
-            onAsk = onAsk,
+        // Floating + (add a payment), bottom right above the nav bar: the one primary action.
+        AddAndScanButtons(
             onAdd = { adding = true },
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to Bg))
-                .padding(start = Spacing.screen, end = Spacing.screen, top = 28.dp, bottom = 16.dp),
+                .align(Alignment.BottomEnd)
+                .padding(end = Spacing.screen, bottom = 16.dp),
         )
     }
 }
@@ -374,7 +389,7 @@ private fun PullDownRefresh(
     }
 }
 
-/** Home, DESIGN.md §5: hero, "To check", Payments ›, Categories ›, then the pinned Ask bar. */
+/** Home, DESIGN.md §5: hero, "To check", Transactions, Categories ›. */
 @Composable
 private fun FeedList(
     state: HomeUiState.Loaded,
@@ -383,10 +398,18 @@ private fun FeedList(
     onOpenReview: () -> Unit,
     onOpenPayment: (String) -> Unit,
     onOpenPayments: () -> Unit,
+    onOpenReceived: () -> Unit,
     onCheck: (PaymentRowModel) -> Unit,
     onTag: (PaymentRowModel) -> Unit,
     onOpenSheet: (String) -> Unit,
+    onOpenBudgets: () -> Unit,
+    onOpenInsights: () -> Unit,
 ) {
+    state.budget?.let { budget ->
+        // Feature 3 bd10: with a budget, Home leads with what's left this month.
+        BudgetHomeList(state, budget, listState, onOpenReview, onOpenPayments, onCheck, onTag, onOpenSheet, onOpenBudgets, onOpenInsights)
+        return
+    }
     val since = RangeWords.since(state.spend.range)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -407,19 +430,21 @@ private fun FeedList(
                 Spacer(Modifier.height(Spacing.cardGap))
             }
         }
-        item {
-            Spacer(Modifier.height(Spacing.section - Spacing.cardGap))
-            SectionHeader("Payments", onClick = onOpenPayments)
+        // Money in for the same days, as a summary row (DESIGN.md §4.4). Not in the hero.
+        item(key = "received") {
+            ReceivedRow(state.received, onClick = onOpenReceived) // the switcher above already names the days
             Spacer(Modifier.height(Spacing.cardGap))
         }
-        if (state.recent.isEmpty()) {
-            item {
-                EmptyRangeCard(state.spend.range, onChangeDates = onPickPeriod)
-                Spacer(Modifier.height(Spacing.cardGap))
-            }
-        }
-        items(state.recent, key = { it.key }) {
-            PaymentCard(it, onClick = { onOpenSheet(it.key) }, onCheck = { onCheck(it) }, onAddCategory = { onTag(it) })
+        item(key = "transactions") {
+            Spacer(Modifier.height(Spacing.section - Spacing.cardGap))
+            TransactionsSection(
+                rows = state.recent,
+                onOpen = { onOpenSheet(it.key) },
+                onCheck = onCheck,
+                onTag = onTag,
+                onSeeAll = onOpenPayments,
+                empty = { EmptyRangeCard(state.spend.range, onChangeDates = onPickPeriod) },
+            )
             Spacer(Modifier.height(Spacing.cardGap))
         }
         if (state.categories.isNotEmpty()) {
@@ -450,9 +475,8 @@ private fun FeedList(
     }
 }
 
-private fun hasReadSms(context: Context) =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
-        PackageManager.PERMISSION_GRANTED
+/** Read and receive: see [com.yourteam.expensetracker.ui.screens.onboarding.Onboarding.SMS_PERMISSIONS]. */
+private fun hasReadSms(context: Context) = com.yourteam.expensetracker.ui.screens.onboarding.Onboarding.hasSms(context)
 
 private fun appSettingsIntent(context: Context) =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
@@ -497,6 +521,18 @@ private fun EmptyRangeCard(range: com.yourteam.expensetracker.insights.DateRange
 }
 
 /** "● 4 payments need a check   Review ›": whole banner opens Review. Hidden at 0 (MVP M14). */
+/** "Received · 2 · +₹400" (green paired with the word "Received"); "₹0" in grey when nothing came in. */
+@Composable
+private fun ReceivedRow(total: ReceivedTotal, onClick: () -> Unit) {
+    SummaryRow(
+        icon = com.yourteam.expensetracker.ui.theme.HugeIcons.MoneyAdd, // money coming in
+        label = if (total.count > 0) "Received · ${total.count}" else "Received",
+        value = if (total.count > 0) "+${Money.formatAmount(total.paise)}" else Money.formatAmount(0),
+        onClick = onClick,
+        valueColor = if (total.count > 0) com.yourteam.expensetracker.ui.theme.Positive else com.yourteam.expensetracker.ui.theme.TextSecondary,
+    )
+}
+
 @Composable
 private fun CheckBanner(count: Int, onClick: () -> Unit) {
     Row(
@@ -506,8 +542,8 @@ private fun CheckBanner(count: Int, onClick: () -> Unit) {
             .clip(CardShape)
             .background(com.yourteam.expensetracker.ui.theme.Surface)
             .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
-            .heightIn(min = 56.dp)
-            .padding(start = 18.dp, end = 12.dp, top = 16.dp, bottom = 16.dp),
+            .heightIn(min = Spacing.button)
+            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
     ) {
         Box(Modifier.size(8.dp).background(com.yourteam.expensetracker.ui.theme.Negative, CircleShape))
         Spacer(Modifier.width(12.dp))
@@ -522,7 +558,7 @@ private fun CheckBanner(count: Int, onClick: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         Text("Review", style = AppType.tab, color = Accent)
         androidx.compose.material3.Icon(
-            androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronRight,
             contentDescription = null,
             tint = Accent,
             modifier = Modifier.size(20.dp),

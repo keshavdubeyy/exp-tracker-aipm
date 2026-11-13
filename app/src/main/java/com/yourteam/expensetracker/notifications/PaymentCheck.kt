@@ -1,5 +1,7 @@
 package com.yourteam.expensetracker.notifications
 
+import com.yourteam.expensetracker.data.PaymentRepository
+import com.yourteam.expensetracker.categoriser.PaymentFacts
 import com.yourteam.expensetracker.BuildConfig
 import android.Manifest
 import android.app.NotificationChannel
@@ -108,7 +110,8 @@ object PaymentCheck {
         val db = AppDatabase.get(context)
 
         val started = db.pendingPaymentDao().between(from, to).mapNotNull(PaymentInputs::started)
-        val chats = db.screenPaymentDao().between(from, to).mapNotNull(PaymentInputs::chat)
+        val chats = db.screenPaymentDao().between(from, to).mapNotNull(PaymentInputs::chat) +
+            db.upiNotificationDao().between(from, to).mapNotNull(PaymentInputs::paid)
         val debits = if (hasPermission(context, Manifest.permission.READ_SMS)) {
             SmsReader(context).readBetween(from, to).filter(SenderFilter::keep).mapNotNull(PaymentInputs::debit)
         } else {
@@ -117,7 +120,7 @@ object PaymentCheck {
 
         val payment = Reconciler.reconcile(started, chats, debits).firstOrNull { it.started?.id == pending.id }
         val source = when {
-            payment?.chat != null -> "GPay chat"
+            payment?.chat != null -> payment.chat.source
             payment?.sms != null -> "bank SMS"
             else -> return null
         }
@@ -139,8 +142,8 @@ object PaymentCheck {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_payment)
-            .setContentTitle("Did your ₹${pending.amountText} to ${pending.payee} go through?")
-            .setContentText("We couldn't find a bank SMS or GPay record for it.")
+            .setContentTitle("Did your ₹${pending.amountText.removeSuffix(".00")} to ${pending.payee} go through?")
+            .setContentText(categoryLine(context, pending))
             .setContentIntent(open)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH) // banner on Android 7 and older
@@ -150,6 +153,15 @@ object PaymentCheck {
             .build()
         @Suppress("MissingPermission") // checked in canNotify()
         NotificationManagerCompat.from(context).notify(notificationId(pending.id), notification)
+    }
+
+    /** Feature 1: tell them where it will be filed, or that we'll need them to pick. */
+    private fun categoryLine(context: Context, pending: PendingPayment): String {
+        val paise = PaymentInputs.started(pending)?.paise ?: 0
+        val facts = PaymentFacts(pending.payee, paise = paise, at = pending.detectedAt, method = "UPI")
+        val guess = PaymentRepository.get(context).guessForNew(facts, "started-${pending.id}")
+        return guess.category?.let { "No bank SMS yet. Tap Yes if money left your account. We'll save it under $it." }
+            ?: "No bank SMS yet. Tap Yes if money left your account."
     }
 
     fun cancelNotification(context: Context, pendingId: Long) =
@@ -212,6 +224,7 @@ class PaymentCheckReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 AppDatabase.get(context).pendingPaymentDao().setStatus(id, status)
+                com.yourteam.expensetracker.metrics.CaptureLog.answered(context, id, com.yourteam.expensetracker.metrics.CaptureLog.Via.NOTIFICATION)
                 PaymentCheck.cancelNotification(context, id)
             } finally {
                 result.finish()

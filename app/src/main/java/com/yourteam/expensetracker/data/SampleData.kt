@@ -2,6 +2,7 @@ package com.yourteam.expensetracker.data
 
 import com.yourteam.expensetracker.insights.BankDebit
 import com.yourteam.expensetracker.insights.ChatLine
+import com.yourteam.expensetracker.insights.Received
 import com.yourteam.expensetracker.insights.Reconciler
 import com.yourteam.expensetracker.insights.StartedPayment
 import com.yourteam.expensetracker.insights.UserAnswer
@@ -77,12 +78,48 @@ object SampleData {
         chat(60, "Priya Sharma", at(4, 21, 10))
         start(-5, 30, "Auto rickshaw", at(5, 9, 50), UserAnswer.YES)
 
-        // Not payments: a credit SMS and a money-received notification.
+        // --- Feature 2 history: completed payments across this month and the same days last month,
+        // so Insights can compare periods and spot patterns. All are chat+SMS (never "needs answer"). ---
+        fun onDay(monthsAgo: Long, dom: Int, h: Int, min: Int): Long {
+            val date = today.minusMonths(monthsAgo).let { it.withDayOfMonth(dom.coerceAtMost(it.lengthOfMonth())) }
+            return date.atTime(LocalTime.of(h, min)).atZone(zone).toInstant().toEpochMilli()
+        }
+        fun paid(rupees: Long, payee: String, t: Long) { chat(rupees, payee, t); debitSms(rupees, payee, t + 60_000) }
+
+        // This month (1–today): food led by Swiggy (most after 8 pm), shopping, travel, groceries.
+        paid(310, "Swiggy", onDay(0, 2, 21, 10)); paid(280, "Swiggy", onDay(0, 5, 20, 40))
+        paid(420, "Swiggy", onDay(0, 8, 21, 30)); paid(260, "Swiggy", onDay(0, 11, 22, 5))
+        paid(520, "Zomato", onDay(0, 3, 13, 20)); paid(460, "Zomato", onDay(0, 9, 13, 40))
+        paid(1450, "Barbeque Nation", onDay(0, 8, 20, 30))
+        paid(2600, "Myntra", onDay(0, 2, 15, 0)); paid(1900, "Myntra", onDay(0, 7, 16, 30))
+        paid(1500, "Amazon", onDay(0, 4, 11, 0))
+        paid(260, "Uber", onDay(0, 6, 9, 30)); paid(340, "Uber", onDay(0, 10, 19, 0))
+        paid(1800, "DMart", onDay(0, 5, 18, 0))
+        paid(900, "Lakshmi Stores", onDay(0, 9, 19, 30)) // unknown shop → "Not sorted yet"
+
+        // Same days last month: a full, comparable month so the % change reads sensibly, but with
+        // less on food (so "Food & Dining is up").
+        paid(300, "Swiggy", onDay(1, 4, 21, 0)); paid(470, "Zomato", onDay(1, 9, 13, 30))
+        paid(1400, "Barbeque Nation", onDay(1, 10, 20, 30)); paid(900, "Swiggy", onDay(1, 11, 21, 0))
+        paid(2200, "Myntra", onDay(1, 3, 15, 0)); paid(1800, "Myntra", onDay(1, 8, 16, 0))
+        paid(1500, "Amazon", onDay(1, 4, 11, 0))
+        paid(300, "Uber", onDay(1, 6, 9, 0)); paid(1600, "DMart", onDay(1, 5, 18, 0))
+        paid(2400, "Big Bazaar", onDay(1, 6, 19, 0)); paid(1499, "Airtel", onDay(1, 3, 11, 0))
+        paid(649, "Netflix", onDay(1, 8, 7, 0)); paid(15000, "Ramesh Gupta", onDay(1, 12, 10, 0))
+
+        // Money in: a credit SMS (shown as Received, never counted as spending) and the matching GPay notification.
         sms += SmsMessage(
             smsId--, SENDER,
             "Dear SBI User, your A/c X1234-credited by Rs.500 on ${DateTimeFormatter.ofPattern("ddMMMyy").format(today.minusDays(4))} " +
                 "transfer from PRIYA SHARMA Ref No 600011112222 -SBI",
             at(4, 21, 30),
+        )
+        // Salary in, so "Money in" is a realistic figure (never added to spending).
+        sms += SmsMessage(
+            smsId--, SENDER,
+            "Dear SBI User, your A/c X1234 credited by Rs.40000.00 on ${DateTimeFormatter.ofPattern("ddMMMyy").format(today.withDayOfMonth(1))} " +
+                "by SALARY from ACME TECHNOLOGIES PVT LTD Ref No 600099990000 -SBI",
+            today.withDayOfMonth(1).atTime(LocalTime.of(10, 0)).atZone(zone).toInstant().toEpochMilli(),
         )
         val notes = listOf(
             UpiNotification(-1, "com.google.android.apps.nbu.paisa.user", "GPay", "Priya Sharma paid you ₹500", "Paid to your SBI account", at(4, 21, 30)),
@@ -92,6 +129,7 @@ object SampleData {
             bankSms = sms.sortedByDescending { it.dateMillis },
             notifications = notes,
             payments = Reconciler.reconcile(started + manual, chats, sms.mapNotNull(PaymentInputs::debit)),
+            received = Received.merge(sms.mapNotNull(PaymentInputs::credit), notes.mapNotNull(PaymentInputs::credit)),
         )
     }
 }

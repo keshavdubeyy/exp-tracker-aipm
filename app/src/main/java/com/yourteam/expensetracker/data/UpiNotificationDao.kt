@@ -14,4 +14,7 @@ interface UpiNotificationDao {
 
     @Query("SELECT * FROM upi_notifications ORDER BY postedAt DESC")
     fun observeAll(): Flow<List<UpiNotification>>
+
+    @Query("SELECT * FROM upi_notifications WHERE postedAt BETWEEN :from AND :to")
+    suspend fun between(from: Long, to: Long): List<UpiNotification>
 }

@@ -27,7 +27,7 @@ Rules for every task in this repo. Follow them every time.
 - Package: `com.yourteam.expensetracker`
 - Packages: `sms/`, `notifications/` (UPI app notification listener + GPay screen reader), `parser/`, `data/`, `categoriser/`, `insights/`, `ui/theme/`, `ui/navigation/`, `ui/screens/{onboarding,home,detail,review,insights,sources,profile,payments,ask,share}/`
 - Design system: [DESIGN.md](DESIGN.md). In short: follows the system light / dark theme (always use the colour tokens, never hex values), near-black `#0B0B0D` background in dark,
-  `#1C1C1F` cards with 24dp corners, one blue accent `#98BBF4`, Inter 400/600 (no bold),
+  `#1C1C1F` cards with 24dp corners, one blue accent `#98BBF4`, DM Sans 400/500/600 (no bold),
   one big hero amount per screen, no borders, shadows or gradients, every payment shows its source,
   green/red always paired with words.
 

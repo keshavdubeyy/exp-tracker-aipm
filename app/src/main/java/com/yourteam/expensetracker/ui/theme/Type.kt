@@ -15,45 +15,50 @@ private val fontProvider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs,
 )
 
-private val inter = GoogleFont("Inter")
+private val dmSans = GoogleFont("DM Sans")
 
-/** Inter for everything: 400 and 600 (DESIGN.md §2). No bold. */
-val InterFamily = FontFamily(
-    Font(googleFont = inter, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = inter, fontProvider = fontProvider, weight = FontWeight.SemiBold),
+/** DM Sans for everything: 400, 500 and 600 (DESIGN.md §2). No bold. */
+val DmSansFamily = FontFamily(
+    Font(googleFont = dmSans, fontProvider = fontProvider, weight = FontWeight.Normal),
+    Font(googleFont = dmSans, fontProvider = fontProvider, weight = FontWeight.Medium),
+    Font(googleFont = dmSans, fontProvider = fontProvider, weight = FontWeight.SemiBold),
 )
 
 private fun style(size: Int, line: Int, weight: FontWeight, trackingSp: Double = 0.0) = TextStyle(
-    fontFamily = InterFamily,
+    fontFamily = DmSansFamily,
     fontWeight = weight,
     fontSize = size.sp,
     lineHeight = line.sp,
     letterSpacing = trackingSp.sp,
 )
 
-/** The named styles from DESIGN.md §2. Use these in new UI. */
+/**
+ * The named styles from DESIGN.md §2. Use these in new UI.
+ * Hierarchy comes from weight as much as size: 600 only for the hero, titles and amounts,
+ * 500 for row names and controls, 400 for everything you read.
+ */
 object AppType {
     /** The one big amount per screen. Never two on a screen. */
-    val hero = style(48, 52, FontWeight.SemiBold, -1.0)
-    /** "Payments ›", "Categories ›", screen titles. */
-    val sectionTitle = style(24, 30, FontWeight.SemiBold)
+    val hero = style(40, 46, FontWeight.SemiBold, -0.8)
+    /** Section headers and sheet / screen titles. */
+    val sectionTitle = style(18, 24, FontWeight.SemiBold)
     /** Amount on category / stat cards. */
-    val statValue = style(20, 26, FontWeight.SemiBold)
+    val statValue = style(17, 22, FontWeight.SemiBold)
     /** Payee name, card title, row amount. */
-    val rowTitle = style(15, 20, FontWeight.SemiBold)
-    /** Pill tabs, period switcher. */
-    val tab = style(14, 18, FontWeight.SemiBold)
+    val rowTitle = style(15, 20, FontWeight.Medium)
+    /** Pill tabs, period switcher, button labels. */
+    val tab = style(14, 18, FontWeight.Medium)
     /** Row subtitles, explanations. */
     val body = style(13, 18, FontWeight.Normal)
     /** Badges, delta chips, source labels. Also the minimum size. */
-    val chip = style(12, 16, FontWeight.SemiBold)
+    val chip = style(12, 16, FontWeight.Medium)
 }
 
 /** Material roles mapped onto the DESIGN.md scale, so stock components match. Min 12sp, no bold. */
 val AppTypography = Typography(
     displayLarge = AppType.hero,
-    displayMedium = style(36, 40, FontWeight.SemiBold, -0.5),
-    displaySmall = style(28, 34, FontWeight.SemiBold, -0.3),
+    displayMedium = style(32, 38, FontWeight.SemiBold, -0.5),
+    displaySmall = style(24, 30, FontWeight.SemiBold, -0.3),
     headlineLarge = AppType.sectionTitle,
     headlineMedium = AppType.sectionTitle,
     headlineSmall = AppType.statValue,
@@ -65,5 +70,5 @@ val AppTypography = Typography(
     bodySmall = style(12, 16, FontWeight.Normal),
     labelLarge = AppType.tab,
     labelMedium = AppType.chip,
-    labelSmall = style(12, 16, FontWeight.SemiBold),
+    labelSmall = style(12, 16, FontWeight.Medium),
 )

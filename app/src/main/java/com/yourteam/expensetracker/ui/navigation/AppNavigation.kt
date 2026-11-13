@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,6 +86,11 @@ import com.yourteam.expensetracker.ui.theme.Spacing
 import com.yourteam.expensetracker.ui.theme.Surface
 import com.yourteam.expensetracker.ui.theme.SurfaceRaised
 import com.yourteam.expensetracker.ui.theme.TextPrimary
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import com.yourteam.expensetracker.ui.theme.AppIcons
+import com.yourteam.expensetracker.ui.theme.TextSecondary
 import kotlin.math.roundToInt
 
 private const val TAB_FADE_MS = 140
@@ -126,6 +129,28 @@ private fun MainApp() {
     val repo = PaymentRepository.get(context)
     val sampleMode by repo.sampleMode.collectAsStateWithLifecycle()
 
+    // MVP M24 tester metrics: note the day the app was opened, keep the daily upload scheduled,
+    // and ask once (test builds with a server only) before anything is sent.
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        com.yourteam.expensetracker.metrics.UsageLog.appOpened(context)
+        onPauseOrDispose { }
+    }
+    var askMetrics by remember {
+        androidx.compose.runtime.mutableStateOf(
+            com.yourteam.expensetracker.metrics.MetricsUpload.available && com.yourteam.expensetracker.metrics.UsageLog.needsAsk(context),
+        )
+    }
+    LaunchedEffect(Unit) { com.yourteam.expensetracker.metrics.MetricsUpload.schedule(context) }
+    if (askMetrics) {
+        com.yourteam.expensetracker.metrics.MetricsConsentDialog(onAnswer = { yes ->
+            com.yourteam.expensetracker.metrics.UsageLog.setConsent(context, yes)
+            com.yourteam.expensetracker.metrics.MetricsUpload.schedule(context)
+            if (yes) com.yourteam.expensetracker.metrics.MetricsUpload.sendNow(context)
+            Feedback.tick()
+            askMetrics = false
+        })
+    }
+
     fun openTab(route: String) = navController.navigate(route) {
         popUpTo(navController.graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
@@ -133,6 +158,7 @@ private fun MainApp() {
     }
     val openPayment = { key: String -> navController.navigate("${Routes.PAYMENT}/${Uri.encode(key)}") }
     val back: () -> Unit = { navController.popBackStack() }
+    val openBudgetCategory = { name: String -> navController.navigate("${Routes.BUDGET_CATEGORY}/${Uri.encode(name)}") }
     val onTab = TopLevelDestination.entries.firstOrNull { d -> currentDestination?.hierarchy?.any { it.route == d.route } == true }
 
     // Top bar hides while content scrolls down, and comes back as soon as it scrolls up.
@@ -149,24 +175,42 @@ private fun MainApp() {
     }
     LaunchedEffect(currentDestination?.route) { barHidden = 0f } // always show it on a new screen
 
+    // Opened from a category notification: go straight to Review (Feature 1 Flow 3).
+    val activity = context as? android.app.Activity
+    LaunchedEffect(activity?.intent) {
+        val intent = activity?.intent ?: return@LaunchedEffect
+        val open = intent.getStringExtra(com.yourteam.expensetracker.notifications.CategoryPrompt.EXTRA_OPEN) ?: return@LaunchedEffect
+        intent.removeExtra(com.yourteam.expensetracker.notifications.CategoryPrompt.EXTRA_OPEN)
+        val budgets = com.yourteam.expensetracker.notifications.BudgetAlerts
+        when {
+            open == "review" -> openTab(TopLevelDestination.Review.route)
+            open == budgets.OPEN_BUDGETS -> openTab(TopLevelDestination.Budgets.route)
+            open.startsWith(budgets.OPEN_CATEGORY_PREFIX) -> { // Feature 3 alert → that category's budget
+                openTab(TopLevelDestination.Budgets.route)
+                openBudgetCategory(open.removePrefix(budgets.OPEN_CATEGORY_PREFIX))
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Bg)) {
         Column(Modifier.fillMaxSize().systemBarsPadding().nestedScroll(hideOnScroll)) {
-            // Tabs only on the four main screens; sub-screens have their own Back.
-            if (onTab != null || currentDestination == null) {
-                TopTabs(
+            // Profile button on top and the nav bar at the bottom, only on the main tabs; sub-screens have their own Back.
+            val showTabs = onTab != null || currentDestination == null
+            if (showTabs) {
+                ProfileBar(
                     modifier = Modifier.clipToBounds().layout { m, c ->
                         val p = m.measure(c)
                         barHeight[0] = p.height
                         val hidden = barHidden.roundToInt().coerceAtMost(p.height)
                         layout(p.width, p.height - hidden) { p.place(0, -hidden) }
                     },
-                    current = onTab ?: TopLevelDestination.Home,
-                    reviewCount = (reviewState as? com.yourteam.expensetracker.ui.screens.review.ReviewUiState.Loaded)?.toCheck?.count ?: 0,
-                    onTab = {
-                        if (it != onTab) Feedback.tick() // F15
-                        openTab(it.route)
-                    },
                     onProfile = { navController.navigate(Routes.PROFILE) },
+                    // Test builds only: switch to made-up data, in the top bar instead of floating.
+                    sample = if (BuildConfig.TEST_BUILD) sampleMode else null,
+                    onToggleSample = {
+                        Feedback.toggle(!sampleMode) // F16
+                        repo.setSampleMode(!sampleMode)
+                    },
                 )
             }
             NavHost(
@@ -182,19 +226,98 @@ private fun MainApp() {
                     HomeScreen(
                         onOpenPayment = openPayment,
                         onOpenPayments = { navController.navigate(Routes.PAYMENTS) },
+                        onOpenReceived = { navController.navigate(Routes.PAYMENTS_RECEIVED) },
                         onOpenReview = { openTab(TopLevelDestination.Review.route) },
-                        onAsk = { navController.navigate(Routes.ASK) },
+                        onOpenBudgets = { openTab(TopLevelDestination.Budgets.route) },
+                        onOpenInsights = { openTab(TopLevelDestination.Insights.route) },
                     )
                 }
                 composable(TopLevelDestination.Review.route) { ReviewScreen(onOpenPayment = openPayment) }
+                composable(TopLevelDestination.Budgets.route) {
+                    com.yourteam.expensetracker.ui.screens.budgets.BudgetsScreen(
+                        onSetup = { mode -> navController.navigate("${Routes.BUDGET_SETUP}/$mode") },
+                        onOpenCategory = openBudgetCategory,
+                        onOpenPast = { m -> navController.navigate("${Routes.BUDGET_PAST}/${m ?: "latest"}") },
+                        onOpenReview = { openTab(TopLevelDestination.Review.route) },
+                    )
+                }
+                composable(
+                    route = "${Routes.BUDGET_SETUP}/{mode}",
+                    arguments = listOf(navArgument("mode") { type = NavType.StringType }),
+                    enterTransition = { slideIn() }, popExitTransition = { slideOut() },
+                ) { entry ->
+                    com.yourteam.expensetracker.ui.screens.budgets.BudgetSetupScreen(
+                        mode = entry.arguments?.getString("mode").orEmpty(),
+                        onDone = back,
+                    )
+                }
+                composable(
+                    route = "${Routes.BUDGET_CATEGORY}/{name}",
+                    arguments = listOf(navArgument("name") { type = NavType.StringType }),
+                    enterTransition = { slideIn() }, popExitTransition = { slideOut() },
+                ) { entry ->
+                    com.yourteam.expensetracker.ui.screens.budgets.BudgetCategoryScreen(
+                        category = Uri.decode(entry.arguments?.getString("name").orEmpty()),
+                        onBack = back,
+                        onOpenPayment = openPayment,
+                    )
+                }
+                composable(
+                    route = "${Routes.BUDGET_PAST}/{month}",
+                    arguments = listOf(navArgument("month") { type = NavType.StringType }),
+                    enterTransition = { slideIn() }, popExitTransition = { slideOut() },
+                ) { entry ->
+                    com.yourteam.expensetracker.ui.screens.budgets.PastBudgetsScreen(
+                        initial = entry.arguments?.getString("month")?.let { runCatching { java.time.YearMonth.parse(it) }.getOrNull() },
+                        onBack = back,
+                    )
+                }
                 composable(TopLevelDestination.Insights.route) {
-                    InsightsScreen(onOpenReview = { openTab(TopLevelDestination.Review.route) })
+                    InsightsScreen(
+                        onOpenReview = { openTab(TopLevelDestination.Review.route) },
+                        onNavigate = { navController.navigate(it) },
+                        onOpenSources = { navController.navigate(Routes.SOURCES) },
+                    )
+                }
+                composable(
+                    route = "${com.yourteam.expensetracker.ui.screens.insights.InsightNav.CATEGORY}/{${com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET}}/{${com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD}}",
+                    arguments = listOf(
+                        navArgument(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET) { type = NavType.StringType },
+                        navArgument(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD) { type = NavType.StringType },
+                    ),
+                    enterTransition = { slideIn() }, popExitTransition = { slideOut() },
+                ) { entry ->
+                    com.yourteam.expensetracker.ui.screens.insights.CategoryDetailScreen(
+                        category = Uri.decode(entry.arguments?.getString(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET).orEmpty()),
+                        period = com.yourteam.expensetracker.ui.screens.insights.InsightNav.decodePeriod(entry.arguments?.getString(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD).orEmpty()),
+                        onBack = back,
+                        onOpenPayment = openPayment,
+                    )
+                }
+                composable(
+                    route = "${com.yourteam.expensetracker.ui.screens.insights.InsightNav.INSIGHT}/{${com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET}}/{${com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD}}",
+                    arguments = listOf(
+                        navArgument(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET) { type = NavType.StringType },
+                        navArgument(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD) { type = NavType.StringType },
+                    ),
+                    enterTransition = { slideIn() }, popExitTransition = { slideOut() },
+                ) { entry ->
+                    com.yourteam.expensetracker.ui.screens.insights.InsightDetailScreen(
+                        insightId = Uri.decode(entry.arguments?.getString(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_TARGET).orEmpty()),
+                        period = com.yourteam.expensetracker.ui.screens.insights.InsightNav.decodePeriod(entry.arguments?.getString(com.yourteam.expensetracker.ui.screens.insights.InsightNav.ARG_PERIOD).orEmpty()),
+                        onBack = back,
+                        onOpenPayment = openPayment,
+                    )
                 }
                 subScreen(Routes.SOURCES) { SourcesScreen(onBack = back) }
+                subScreen(Routes.DUPLICATES) { com.yourteam.expensetracker.ui.screens.profile.DuplicatesScreen(onBack = back) }
+                subScreen(Routes.DEVELOPER) { com.yourteam.expensetracker.ui.screens.profile.DeveloperScreen(onBack = back) }
+                subScreen(Routes.CATEGORIES) { com.yourteam.expensetracker.ui.screens.profile.CategoriesScreen(onBack = back) }
                 subScreen(Routes.ASK) { AskScreen(onBack = back) }
                 subScreen(Routes.PAYMENTS) { PaymentsScreen(onBack = back, onOpenPayment = openPayment) }
+                subScreen(Routes.PAYMENTS_RECEIVED) { PaymentsScreen(onBack = back, onOpenPayment = openPayment, onlyReceived = true) }
                 subScreen(Routes.PROFILE) {
-                    ProfileScreen(onBack = back, onOpenSources = { navController.navigate(Routes.SOURCES) })
+                    ProfileScreen(onBack = back, onOpenSources = { navController.navigate(Routes.SOURCES) }, onOpenCategories = { navController.navigate(Routes.CATEGORIES) }, onOpenDeveloper = { navController.navigate(Routes.DEVELOPER) }, onOpenDuplicates = { navController.navigate(Routes.DUPLICATES) })
                 }
                 composable(
                     route = "${Routes.PAYMENT}/{${DetailViewModel.ARG_KEY}}",
@@ -205,14 +328,16 @@ private fun MainApp() {
                     DetailScreen(onBack = back)
                 }
             }
-        }
-
-        // Test builds only: a floating switch for made-up data. Drag it out of the way.
-        if (BuildConfig.TEST_BUILD) {
-            SampleDataBubble(on = sampleMode, onToggle = {
-                Feedback.toggle(!sampleMode) // F16
-                repo.setSampleMode(!sampleMode)
-            })
+            if (showTabs) {
+                BottomNavBar(
+                    current = onTab ?: TopLevelDestination.Home,
+                    reviewCount = (reviewState as? com.yourteam.expensetracker.ui.screens.review.ReviewUiState.Loaded)?.toCheck?.count ?: 0,
+                    onTab = {
+                        if (it != onTab) Feedback.tick() // F15
+                        openTab(it.route)
+                    },
+                )
+            }
         }
 
         // Confirmations slide down from the top (FEEDBACK.md §2), clear of the Ask bar and bottom CTAs.
@@ -235,22 +360,16 @@ private fun AnimatedContentTransitionScope<*>.slideIn() =
 private fun AnimatedContentTransitionScope<*>.slideOut() =
     slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(240, easing = FastOutSlowInEasing)) + fadeOut(tween(200))
 
-/** Avatar + pill tabs, scrolling sideways if they overflow (DESIGN.md §4.1). */
+/** Profile avatar, top left of the main tabs (DESIGN.md §4.1). Hides while content scrolls down. */
 @Composable
-private fun TopTabs(
+private fun ProfileBar(
     modifier: Modifier = Modifier,
-    current: TopLevelDestination,
-    reviewCount: Int,
-    onTab: (TopLevelDestination) -> Unit,
     onProfile: () -> Unit,
+    /** Null hides the Sample switch (release builds). */
+    sample: Boolean? = null,
+    onToggleSample: () -> Unit = {},
 ) {
-    Row(
-        modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.screen, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
                 .size(Spacing.circle)
@@ -259,54 +378,81 @@ private fun TopTabs(
                 .clickable(role = Role.Button, onClick = onProfile),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Person, contentDescription = "Profile, accounts and settings", tint = OnAccent, modifier = Modifier.size(24.dp))
+            Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.User, contentDescription = "Profile, accounts and settings", tint = OnAccent, modifier = Modifier.size(24.dp))
         }
-        TopLevelDestination.entries.forEach { d ->
-            val selected = d == current
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+        if (sample != null) {
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (sample) "Sample on" else "Sample off",
+                style = AppType.chip,
+                color = if (sample) OnAccent else TextPrimary,
                 modifier = Modifier
                     .heightIn(min = Spacing.circle)
                     .clip(PillShape)
-                    .background(if (selected) Accent else Surface)
-                    .clickable(role = Role.Tab, onClick = { onTab(d) })
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .background(if (sample) Accent else Surface)
+                    .clickable(role = Role.Switch, onClick = onToggleSample)
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+            )
+        }
+    }
+}
+
+private fun TopLevelDestination.icon() = when (this) {
+    TopLevelDestination.Home -> AppIcons.Home
+    TopLevelDestination.Insights -> AppIcons.Chart
+    TopLevelDestination.Budgets -> AppIcons.Wallet
+    TopLevelDestination.Review -> AppIcons.CheckBox
+}
+
+/**
+ * Bottom navigation bar: Home · Insights · Budgets · Review (DESIGN.md §4.1). Active tab: icon in an
+ * accent pill, label in textPrimary. Review shows how many payments need a check.
+ */
+@Composable
+private fun BottomNavBar(current: TopLevelDestination, reviewCount: Int, onTab: (TopLevelDestination) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(Bg).padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TopLevelDestination.entries.forEach { d ->
+            val selected = d == current
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(PillShape)
+                    .selectable(selected = selected, role = Role.Tab, onClick = { onTab(d) })
+                    .padding(vertical = 4.dp),
             ) {
-                Text(d.label, style = AppType.tab, color = if (selected) OnAccent else TextPrimary)
-                if (d == TopLevelDestination.Review && reviewCount > 0) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "$reviewCount",
-                        style = AppType.chip,
-                        color = if (selected) Accent else OnAccent,
-                        modifier = Modifier
-                            .background(if (selected) OnAccent else Accent, PillShape)
-                            .padding(horizontal = 7.dp, vertical = 1.dp),
-                    )
+                Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .size(width = 60.dp, height = 32.dp)
+                            .clip(PillShape)
+                            .background(if (selected) Accent else Bg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(d.icon(), contentDescription = null, tint = if (selected) OnAccent else TextSecondary, modifier = Modifier.size(22.dp))
+                    }
+                    if (d == TopLevelDestination.Review && reviewCount > 0) {
+                        Text(
+                            "$reviewCount",
+                            style = AppType.chip,
+                            color = OnAccent,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-4).dp)
+                                .background(Accent, PillShape)
+                                .padding(horizontal = 6.dp),
+                        )
+                    }
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(d.label, style = AppType.chip, color = if (selected) TextPrimary else TextSecondary)
             }
         }
     }
 }
 
-/** Small draggable bubble: "Sample" switch for test builds. Accent when on. */
-@Composable
-private fun SampleDataBubble(on: Boolean, onToggle: () -> Unit) {
-    var x by rememberSaveable { mutableFloatStateOf(0f) }
-    var y by rememberSaveable { mutableFloatStateOf(0f) }
-    Box(Modifier.fillMaxSize().systemBarsPadding().padding(end = 12.dp, bottom = 96.dp), contentAlignment = Alignment.BottomEnd) {
-        Text(
-            if (on) "Sample on" else "Sample off",
-            style = AppType.chip,
-            color = if (on) OnAccent else TextPrimary,
-            modifier = Modifier
-                .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
-                .pointerInput(Unit) { detectDragGestures { change, drag -> change.consume(); x += drag.x; y += drag.y } }
-                .clip(PillShape)
-                .background(if (on) Accent else SurfaceRaised)
-                .clickable(role = Role.Switch, onClick = onToggle)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        )
-    }
-}
+
 

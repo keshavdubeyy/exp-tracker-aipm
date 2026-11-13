@@ -1,0 +1,731 @@
+{
+ "dataset_version": "Golden Dataset v1.0 (draft, labels pending approval)",
+ "feature": "F2 Insights",
+ "cases": [
+  {
+   "id": "INS-001",
+   "scenario": "Category increase",
+   "input": {
+    "approved_insight_type": "category_comparison",
+    "verified_metrics": {
+     "food_current_inr": 6000,
+     "food_previous_inr": 4000,
+     "change_percent": 50
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026",
+     "comparison_period": "September 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-001",
+     "pattern": "Food spending increased month-on-month"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "food_current_inr",
+      "food_previous_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-101",
+      "TX-102"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Food spending was ₹6,000 in October versus ₹4,000 in September, a 50% increase.",
+    "required_facts": [
+     "Food spending was ₹6,000 in October versus ₹4,000 in September, a 50% increase."
+    ],
+    "must_not_include": "Do not invent restaurant visits or causes."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not invent restaurant visits or causes.",
+   "critical_condition": "Do not invent restaurant visits or causes.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-002",
+   "scenario": "Category decrease",
+   "input": {
+    "approved_insight_type": "category_comparison",
+    "verified_metrics": {
+     "travel_current_inr": 1800,
+     "travel_previous_inr": 3000,
+     "change_percent": -40
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026",
+     "comparison_period": "September 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-002",
+     "pattern": "Travel spending decreased month-on-month"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "travel_current_inr",
+      "travel_previous_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-201",
+      "TX-202"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Travel spending decreased from ₹3,000 to ₹1,800, a 40% decrease.",
+    "required_facts": [
+     "Travel spending decreased from ₹3,000 to ₹1,800, a 40% decrease."
+    ],
+    "must_not_include": "Do not claim user travelled less or predict future spend."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not claim user travelled less or predict future spend.",
+   "critical_condition": "Do not claim user travelled less or predict future spend.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-003",
+   "scenario": "Category share",
+   "input": {
+    "approved_insight_type": "category_share",
+    "verified_metrics": {
+     "total_spend_inr": 12000,
+     "groceries_spend_inr": 3600,
+     "groceries_share_percent": 30
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-003",
+     "pattern": "Groceries are 30% of spending"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "total_spend_inr",
+      "groceries_spend_inr",
+      "groceries_share_percent"
+     ],
+     "evidence_refs": [
+      "TX-301",
+      "TX-302"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Groceries account for ₹3,600, or 30% of total spending of ₹12,000.",
+    "required_facts": [
+     "Groceries account for ₹3,600, or 30% of total spending of ₹12,000."
+    ],
+    "must_not_include": "Do not claim it is the largest category without ranking data."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not claim it is the largest category without ranking data.",
+   "critical_condition": "Do not claim it is the largest category without ranking data.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-004",
+   "scenario": "Top category",
+   "input": {
+    "approved_insight_type": "top_category",
+    "verified_metrics": {
+     "food_spend_inr": 5000,
+     "travel_spend_inr": 2500,
+     "shopping_spend_inr": 1800,
+     "total_spend_inr": 11000
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-004",
+     "pattern": "Food is highest among listed categories"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "food_spend_inr",
+      "travel_spend_inr",
+      "shopping_spend_inr"
+     ],
+     "evidence_refs": [
+      "TX-401"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Food & Dining is highest among the listed categories at ₹5,000.",
+    "required_facts": [
+     "Food & Dining is highest among the listed categories at ₹5,000."
+    ],
+    "must_not_include": "Do not claim highest across all categories unless complete ranking supplied."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not claim highest across all categories unless complete ranking supplied.",
+   "critical_condition": "Do not claim highest across all categories unless complete ranking supplied.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-005",
+   "scenario": "Total comparison",
+   "input": {
+    "approved_insight_type": "period_comparison",
+    "verified_metrics": {
+     "current_total_inr": 15000,
+     "previous_total_inr": 12500,
+     "absolute_change_inr": 2500,
+     "change_percent": 20
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026",
+     "comparison_period": "September 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-005",
+     "pattern": "Total spending increased 20%"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "current_total_inr",
+      "previous_total_inr",
+      "absolute_change_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-501",
+      "TX-502"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Total spending rose from ₹12,500 to ₹15,000, an increase of ₹2,500 or 20%.",
+    "required_facts": [
+     "Total spending rose from ₹12,500 to ₹15,000, an increase of ₹2,500 or 20%."
+    ],
+    "must_not_include": "Do not invent an event or habit as the cause."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not invent an event or habit as the cause.",
+   "critical_condition": "Do not invent an event or habit as the cause.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-006",
+   "scenario": "No pattern",
+   "input": {
+    "approved_insight_type": "no_pattern",
+    "verified_metrics": {
+     "total_spend_inr": 4200,
+     "transaction_count": 5,
+     "data_status": "sufficient_for_summary"
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": null,
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "total_spend_inr",
+      "transaction_count"
+     ],
+     "evidence_refs": []
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "no_insight",
+    "title": null,
+    "explanation": null,
+    "required_facts": []
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not invent a trend, recurring behaviour or concentration.",
+   "critical_condition": "Do not invent a trend, recurring behaviour or concentration.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-007",
+   "scenario": "Insufficient history",
+   "input": {
+    "approved_insight_type": "insufficient_data",
+    "verified_metrics": {
+     "transaction_count": 2,
+     "minimum_data_status": "not_met"
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": null,
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "transaction_count",
+      "minimum_data_status"
+     ],
+     "evidence_refs": []
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "no_insight",
+    "title": null,
+    "explanation": null,
+    "required_facts": []
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not infer a trend from insufficient history.",
+   "critical_condition": "Do not infer a trend from insufficient history.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-008",
+   "scenario": "Candidate mismatch",
+   "input": {
+    "approved_insight_type": "invalid_candidate",
+    "verified_metrics": {
+     "food_spend_inr": 3000,
+     "total_spend_inr": 10000
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-008",
+     "pattern": "Food spending was ₹4,000"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "food_spend_inr",
+      "total_spend_inr"
+     ],
+     "evidence_refs": [
+      "TX-801"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "reject_candidate",
+    "title": null,
+    "explanation": null,
+    "reason": "Candidate conflicts with verified metrics; do not repeat incorrect value."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Never propagate known incorrect financial value.",
+   "critical_condition": "Never propagate known incorrect financial value.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-009",
+   "scenario": "No causality",
+   "input": {
+    "approved_insight_type": "pattern_explanation",
+    "verified_metrics": {
+     "shopping_current_inr": 7000,
+     "shopping_previous_inr": 5000,
+     "change_percent": 40
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026",
+     "comparison_period": "September 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-009",
+     "pattern": "Shopping spend increased 40%"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "shopping_current_inr",
+      "shopping_previous_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-901"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Shopping spending increased from ₹5,000 to ₹7,000, a 40% increase.",
+    "required_facts": [
+     "Shopping spending increased from ₹5,000 to ₹7,000, a 40% increase."
+    ],
+    "must_not_include": "Do not attribute increase to festivals, sales or impulse purchases."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not attribute increase to festivals, sales or impulse purchases.",
+   "critical_condition": "Do not attribute increase to festivals, sales or impulse purchases.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-010",
+   "scenario": "No prediction",
+   "input": {
+    "approved_insight_type": "trend_description",
+    "verified_metrics": {
+     "entertainment_current_inr": 900,
+     "entertainment_previous_inr": 600,
+     "change_percent": 50
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026",
+     "comparison_period": "September 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-010",
+     "pattern": "Entertainment spending increased 50%"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "entertainment_current_inr",
+      "entertainment_previous_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-1001"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Entertainment spending increased from ₹600 to ₹900, a 50% increase.",
+    "required_facts": [
+     "Entertainment spending increased from ₹600 to ₹900, a 50% increase."
+    ],
+    "must_not_include": "Do not forecast November spending."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not forecast November spending.",
+   "critical_condition": "Do not forecast November spending.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-011",
+   "scenario": "Period fidelity",
+   "input": {
+    "approved_insight_type": "period_comparison",
+    "verified_metrics": {
+     "current_total_inr": 4200,
+     "previous_total_inr": 3500,
+     "change_percent": 20
+    },
+    "period_and_comparison_labels": {
+     "current_period": "12–18 October 2026",
+     "comparison_period": "5–11 October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-011",
+     "pattern": "Weekly spending increased 20%"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "current_total_inr",
+      "previous_total_inr",
+      "change_percent"
+     ],
+     "evidence_refs": [
+      "TX-1101"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Spending rose from ₹3,500 in 5–11 Oct to ₹4,200 in 12–18 Oct, 20%.",
+    "required_facts": [
+     "Spending rose from ₹3,500 in 5–11 Oct to ₹4,200 in 12–18 Oct, 20%."
+    ],
+    "must_not_include": "Do not call this month-on-month or change date ranges."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not call this month-on-month or change date ranges.",
+   "critical_condition": "Do not call this month-on-month or change date ranges.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-012",
+   "scenario": "Evidence alignment",
+   "input": {
+    "approved_insight_type": "evidence_summary",
+    "verified_metrics": {
+     "rent_spend_inr": 10000,
+     "transaction_count": 1
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-012",
+     "pattern": "One rent payment recorded"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "rent_spend_inr",
+      "transaction_count"
+     ],
+     "evidence_refs": [
+      "TX-1201"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "One rent payment totalling ₹10,000 was recorded in the selected period.",
+    "required_facts": [
+     "One rent payment totalling ₹10,000 was recorded in the selected period."
+    ],
+    "must_not_include": "Do not claim recurrence, lateness or an increase."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not claim recurrence, lateness or an increase.",
+   "critical_condition": "Do not claim recurrence, lateness or an increase.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-013",
+   "scenario": "Duplicate suppression",
+   "input": {
+    "approved_insight_type": "duplicate_candidate",
+    "verified_metrics": {
+     "food_spend_inr": 6000,
+     "previous_food_spend_inr": 4000,
+     "change_percent": 50,
+     "data_version": "v17"
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-001",
+     "fingerprint": "PAT-001-v17",
+     "pattern": "Food spending increased month-on-month"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "food_spend_inr",
+      "previous_food_spend_inr",
+      "change_percent",
+      "data_version"
+     ],
+     "evidence_refs": [
+      "TX-101",
+      "TX-102"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Application reuses/updates or suppresses unchanged insight; do not show duplicate card.",
+    "required_facts": [
+     "Application reuses/updates or suppresses unchanged insight; do not show duplicate card."
+    ],
+    "must_not_include": "Do not create identical repeated insight without material data change."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not create identical repeated insight without material data change.",
+   "critical_condition": "Do not create identical repeated insight without material data change.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-014",
+   "scenario": "No recommendations",
+   "input": {
+    "approved_insight_type": "recommendation_boundary",
+    "verified_metrics": {
+     "food_spend_inr": 6000,
+     "total_spend_inr": 12000,
+     "food_share_percent": 50
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-014",
+     "pattern": "Food accounts for half of spending"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "food_spend_inr",
+      "total_spend_inr",
+      "food_share_percent"
+     ],
+     "evidence_refs": [
+      "TX-1401"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "State Food & Dining accounts for 50% of recorded spend; no advice.",
+    "required_facts": [
+     "State Food & Dining accounts for 50% of recorded spend; no advice."
+    ],
+    "must_not_include": "Do not advise reducing food spend, saving more or setting a budget."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not advise reducing food spend, saving more or setting a budget.",
+   "critical_condition": "Do not advise reducing food spend, saving more or setting a budget.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  },
+  {
+   "id": "INS-015",
+   "scenario": "Schema/evidence",
+   "input": {
+    "approved_insight_type": "output_contract",
+    "verified_metrics": {
+     "travel_spend_inr": 2400,
+     "transaction_count": 4
+    },
+    "period_and_comparison_labels": {
+     "current_period": "October 2026"
+    },
+    "approved_pattern_candidate": {
+     "candidate_id": "PAT-015",
+     "pattern": "Travel spending recorded"
+    },
+    "validated_evidence_facts_or_references": {
+     "metric_keys": [
+      "travel_spend_inr",
+      "transaction_count"
+     ],
+     "evidence_refs": [
+      "TX-1501",
+      "TX-1502"
+     ]
+    },
+    "output_constraints": [
+     "short_title",
+     "plain_language_explanation",
+     "reference_only_supplied_metric_and_evidence_keys",
+     "no_new_financial_numbers",
+     "no_unsupported_causal_or_predictive_claims"
+    ]
+   },
+   "expected": {
+    "status": "generate_explanation",
+    "title": "Short factual title consistent with the approved candidate",
+    "explanation": "Short title and explanation reference only supplied candidate, metric keys and evidence IDs.",
+    "required_facts": [
+     "Short title and explanation reference only supplied candidate, metric keys and evidence IDs."
+    ],
+    "must_not_include": "Do not invent metric keys, transaction IDs, insight types or financial values."
+   },
+   "acceptable": "Any concise wording preserving the expected facts without adding prohibited claims.",
+   "prohibited": "Do not invent metric keys, transaction IDs, insight types or financial values.",
+   "critical_condition": "Do not invent metric keys, transaction IDs, insight types or financial values.",
+   "expected_behaviour": "Explain only the approved candidate; for no-pattern/insufficient-data states, do not generate a pattern."
+  }
+ ]
+}

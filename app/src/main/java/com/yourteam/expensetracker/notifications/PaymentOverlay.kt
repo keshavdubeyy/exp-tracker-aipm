@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
@@ -58,16 +56,28 @@ import com.yourteam.expensetracker.ui.theme.Heading
 import com.yourteam.expensetracker.ui.theme.PillShape
 import kotlinx.coroutines.delay
 
+/**
+ * The category part of the pop-up (Feature 1): our top 3 guesses, and the one already chosen
+ * ([chosen] is null when we're under 30% sure and need the user to pick).
+ */
+data class OverlayCategory(val suggestions: List<String>, val chosen: String?)
+
 /** What the pop-up shows. */
 sealed interface OverlayContent {
     val amountText: String
     val payee: String
+    val category: OverlayCategory?
 
-    /** A bank SMS or GPay chat line already recorded it. Closes by itself. */
-    data class Recorded(override val amountText: String, override val payee: String, val source: String) : OverlayContent
+    /** A bank SMS or GPay chat line already recorded it. Closes by itself unless the user is picking a category. */
+    data class Recorded(
+        override val amountText: String,
+        override val payee: String,
+        val source: String,
+        override val category: OverlayCategory? = null,
+    ) : OverlayContent
 
     /** Nothing recorded it yet: ask. */
-    data class Ask(override val amountText: String, override val payee: String) : OverlayContent
+    data class Ask(override val amountText: String, override val payee: String, override val category: OverlayCategory? = null) : OverlayContent
 }
 
 /**
@@ -86,7 +96,14 @@ class PaymentOverlay(private val service: AccessibilityService) {
      * Slides a bottom sheet up over whatever is on screen.
      * [onLater] runs when the user closes it with ✕ (Ask only). Tapping outside does nothing.
      */
-    fun show(id: Long, content: OverlayContent, onYes: () -> Unit, onNo: () -> Unit, onLater: () -> Unit) {
+    fun show(
+        id: Long,
+        content: OverlayContent,
+        onYes: () -> Unit,
+        onNo: () -> Unit,
+        onLater: () -> Unit,
+        onPickCategory: (String) -> Unit = {},
+    ) {
         removeNow()
         val owner = OverlayOwner().also { it.start() }
         val state = mutableStateOf(content)
@@ -100,6 +117,7 @@ class PaymentOverlay(private val service: AccessibilityService) {
                         onYes = onYes,
                         onNo = onNo,
                         onLater = onLater,
+                        onPickCategory = onPickCategory,
                         onGone = ::removeNow, // after the slide-down animation
                     )
                 }
@@ -124,8 +142,9 @@ class PaymentOverlay(private val service: AccessibilityService) {
     /** The record turned up while we were asking about payment [id]: show "Payment saved" instead. */
     fun showRecordedIfAsking(id: Long, recorded: OverlayContent.Recorded) {
         val state = shownContent ?: return
-        if (view == null || shownId != id || state.value !is OverlayContent.Ask) return
-        state.value = recorded
+        val asking = state.value as? OverlayContent.Ask ?: return
+        if (view == null || shownId != id) return
+        state.value = recorded.copy(category = asking.category)
     }
 
     /** Removes the window immediately (no animation). */
@@ -147,16 +166,21 @@ private fun OverlaySheet(
     onYes: () -> Unit,
     onNo: () -> Unit,
     onLater: () -> Unit,
+    onPickCategory: (String) -> Unit,
     onGone: () -> Unit,
 ) {
     val visible = remember { MutableTransitionState(false).apply { targetState = true } }
     var answer by remember { mutableStateOf<Answer?>(null) }
     val close = { a: Answer -> if (answer == null) { answer = a; visible.targetState = false } }
+    // The category shown as chosen: our guess, until the user taps another.
+    var chosen by remember(content.category) { mutableStateOf(content.category?.chosen) }
+    val pick = { c: String -> chosen = c; onPickCategory(c) }
 
-    // "Saved" closes by itself.
+    // "Saved" closes by itself, unless we still need a category (then it waits for a pick or ✕).
     if (content is OverlayContent.Recorded) {
-        LaunchedEffect(content) {
-            delay(4_000)
+        LaunchedEffect(content, chosen) {
+            if (content.category != null && chosen == null) return@LaunchedEffect
+            delay(if (content.category?.chosen != chosen) 1_200 else 4_000)
             close(Answer.AutoClose)
         }
     }
@@ -191,6 +215,8 @@ private fun OverlaySheet(
         ) {
             SheetCard(
                 content = content,
+                chosen = chosen,
+                onPick = pick,
                 onYes = { close(Answer.Yes) },
                 onNo = { close(Answer.No) },
                 onClose = { close(if (content is OverlayContent.Ask) Answer.Later else Answer.AutoClose) },
@@ -200,7 +226,14 @@ private fun OverlaySheet(
 }
 
 @Composable
-private fun SheetCard(content: OverlayContent, onYes: () -> Unit, onNo: () -> Unit, onClose: () -> Unit) {
+private fun SheetCard(
+    content: OverlayContent,
+    chosen: String?,
+    onPick: (String) -> Unit,
+    onYes: () -> Unit,
+    onNo: () -> Unit,
+    onClose: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,7 +249,7 @@ private fun SheetCard(content: OverlayContent, onYes: () -> Unit, onNo: () -> Un
                 modifier = Modifier.weight(1f).padding(top = 12.dp),
             )
             IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -229,6 +262,7 @@ private fun SheetCard(content: OverlayContent, onYes: () -> Unit, onNo: () -> Un
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            content.category?.let { CategoryChips(it, chosen, content.payee, onPick) }
             Spacer(Modifier.height(16.dp))
             when (content) {
                 is OverlayContent.Recorded -> Text(
@@ -249,6 +283,51 @@ private fun SheetCard(content: OverlayContent, onYes: () -> Unit, onNo: () -> Un
         }
     }
 }
+/**
+ * Our top 3 guesses as pills; the chosen one is filled. Tapping one saves it for this payee
+ * (Feature 1 §3.5) and fills it. Words say whether we picked it or need the user to.
+ */
+@Composable
+private fun CategoryChips(category: OverlayCategory, chosen: String?, payee: String, onPick: (String) -> Unit) {
+    Spacer(Modifier.height(16.dp))
+    Text(
+        when {
+            chosen == null -> "What was it for? We'll remember it for $payee."
+            chosen == category.chosen -> "Filed under $chosen. Tap another to change."
+            else -> "Saved. Payments to $payee will be $chosen."
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row {
+        category.suggestions.take(3).forEachIndexed { i, c ->
+            if (i > 0) Spacer(Modifier.width(8.dp))
+            val selected = c == chosen
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        PillShape,
+                    )
+                    .clickable { onPick(c) }
+                    .padding(horizontal = 8.dp),
+            ) {
+                Text(
+                    c,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
 /** Compose needs a lifecycle and saved-state owner; a service window has neither, so we provide one. */
 private class OverlayOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val registry = LifecycleRegistry(this)

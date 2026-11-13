@@ -97,6 +97,9 @@ Code: `ui/feedback/Feedback.kt` (helper + top banner host) and `ui/feedback/Paym
 | F31 | Onboarding: notifications Allow / Not now | Card disappears | — | — | Tick |
 | F32 | Onboarding: extra source turned on (seen on return) | Card shows "✓ On" | — | — | Confirm |
 | F33 | Onboarding: back from Settings, source still off | Card unchanged; "Switch greyed out?" help opens on Android 13+ | — | — | none |
+| F35 | Onboarding: sorting past payments finished | Count stops, results show | — | — | Confirm |
+| F36 | Onboarding: category picked for a past payee | 1.2 s loading on the row, then next payee | "Saved. Future payments to X will be Y" | Yes | Confirm |
+| F37 | Onboarding: Skip / Sort the rest / Something else | Moves on | — | — | Tick |
 | F34 | Onboarding complete | Home appears (skeleton while loading) | — | — | none |
 | F24 | Payment added by hand (+ button on Home) | Sheet closes, payment appears with source "Added by you", totals update | "Added ₹40 to Raju Tea Stall" | Yes (removes it) | Confirm |
 

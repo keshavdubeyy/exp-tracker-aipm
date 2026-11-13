@@ -1,16 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only to see when a UPI app's PIN screen opens and closes (no screen content). User grants it in Settings. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Only for the AI categoriser: payee name, UPI ID, amount, hour, method. Never SMS text. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Scan & Pay opens GPay; Android 11+ needs the package declared to launch it. -->
     <queries>
+        <!-- UPI apps, named one by one: some phones (ColorOS) hide them from the upi:// query below. -->
         <package android:name="com.google.android.apps.nbu.paisa.user" />
+        <package android:name="com.phonepe.app" />
+        <package android:name="net.one97.paytm" />
+        <package android:name="in.org.npci.upiapp" />
+        <package android:name="com.dreamplug.androidapp" />
+        <package android:name="com.naviapp" />
+        <package android:name="in.amazon.mShop.android.shopping" />
+        <package android:name="com.mobikwik_new" />
+        <package android:name="com.freecharge.android" />
+        <package android:name="money.super.payments" />
+        <package android:name="money.jupiter" />
+        <package android:name="com.epifi.paisa" />
+        <package android:name="indwin.c3.shareapp" />
+        <package android:name="com.sbi.upi" />
+        <package android:name="com.sbi.lotusintouch" />
+        <package android:name="com.csam.icici.bank.imobile" />
+        <package android:name="com.snapwork.hdfc" />
+        <package android:name="com.axis.mobile" />
+        <package android:name="com.msf.kbank.mobile" />
+        <!-- Scan & Pay (M7): find every installed UPI app to hand the payment to. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
     </queries>
 
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -24,6 +56,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Long-press the app icon: "Scan & Pay" (MVP M7). -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- "Share screenshot" from GPay / PhonePe / any app lands here. -->
@@ -40,9 +74,27 @@
             </intent-filter>
         </activity>
 
+        <!-- New bank SMS: live capture + "what was it for?" when the category is unclear (Feature 1 Flow 2). -->
+        <receiver
+            android:name=".notifications.SmsArrivalReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Category buttons on the "what was it for?" notification. -->
+        <receiver
+            android:name=".notifications.CategoryActionReceiver"
+            android:exported="false" />
+
         <!-- "Yes, I paid" / "Didn't go through" buttons on the payment-check notification. -->
         <receiver
             android:name=".notifications.PaymentCheckReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".notifications.PinCheckReceiver"
             android:exported="false" />
 
         <!-- Reads payment notifications from UPI apps. User must turn on notification access. -->

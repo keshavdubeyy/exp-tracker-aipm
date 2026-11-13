@@ -21,9 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +48,7 @@ import com.yourteam.expensetracker.ui.screens.NeedsCheckSheet
 import com.yourteam.expensetracker.ui.screens.PaymentRowModel
 import com.yourteam.expensetracker.ui.screens.SubScreenHeader
 import com.yourteam.expensetracker.ui.screens.paymentRow
+import com.yourteam.expensetracker.ui.screens.receivedRow
 import com.yourteam.expensetracker.ui.theme.Accent
 import com.yourteam.expensetracker.ui.theme.AppType
 import com.yourteam.expensetracker.ui.theme.Bg
@@ -71,14 +69,17 @@ import java.time.format.DateTimeFormatter
 
 class PaymentsViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = PaymentRepository.get(app).also { it.ensureLoaded() }
-    private fun rows(s: PaymentSnapshot?) = s?.let { snap -> snap.payments.map { paymentRow(it, snap) } }.orEmpty()
+    /** Money out and money in, newest first. Money in is shown only; it's never added to spending. */
+    private fun rows(s: PaymentSnapshot?) = s?.let { snap ->
+        (snap.payments.map { paymentRow(it, snap) } + snap.received.map { receivedRow(it, snap) }).sortedByDescending { it.at }
+    }.orEmpty()
     val rows: StateFlow<List<PaymentRowModel>> = repo.snapshot.map(::rows)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), rows(repo.snapshot.value))
 
     fun answer(id: Long, yes: Boolean) = PaymentActions.answer(repo, id, yes)
 
-    fun setCategory(key: String, category: String) {
-        PaymentActions.categorise(repo, key, category)
+    fun setCategory(key: String, category: String, onlyThis: Boolean = false) {
+        PaymentActions.categorise(repo, key, category, onlyThis)
     }
 }
 
@@ -86,17 +87,24 @@ class PaymentsViewModel(app: Application) : AndroidViewModel(app) {
 private enum class Filter(val label: String, val group: Int, val test: (PaymentRowModel) -> Boolean) {
     NeedsCheck("Needs check", 0, { it.askId != null || it.conflictId != null }),
     NoCategory("No category", 0, { it.debited && it.category == null }),
+    Received("Received", 0, { !it.debited }),
     Under100("Under ₹100", 1, { it.paise < 100_00 }),
     Mid("₹100–₹1,000", 1, { it.paise in 100_00..1_000_00 }),
     Over1000("Over ₹1,000", 1, { it.paise > 1_000_00 }),
 }
 
-/** Every payment, grouped by day, with search, filters and "Add categories to N payments". */
+/** Every payment in and out, grouped by day, with search, filters and "Add categories to N payments". */
 @Composable
-fun PaymentsScreen(onBack: () -> Unit, onOpenPayment: (String) -> Unit, viewModel: PaymentsViewModel = viewModel()) {
+fun PaymentsScreen(
+    onBack: () -> Unit,
+    onOpenPayment: (String) -> Unit,
+    /** Opened from Home's received row: start with the "Received" filter on. */
+    onlyReceived: Boolean = false,
+    viewModel: PaymentsViewModel = viewModel(),
+) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
-    var filters by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var filters by rememberSaveable { mutableStateOf(if (onlyReceived) setOf(Filter.Received.name) else setOf()) }
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var tagging by remember { mutableStateOf<List<PaymentRowModel>?>(null) }
     var opened by rememberSaveable { mutableStateOf<String?>(null) }
@@ -109,16 +117,15 @@ fun PaymentsScreen(onBack: () -> Unit, onOpenPayment: (String) -> Unit, viewMode
     rows.firstOrNull { it.key == opened }?.let { row ->
         PaymentSheet(
             row = row,
-            onPickCategory = { viewModel.setCategory(row.key, it) },
+            onPickCategory = { c, onlyThis -> viewModel.setCategory(row.key, c, onlyThis) },
             onAnswer = viewModel::answer,
             onOpenDetails = { onOpenPayment(row.key) },
             onDismiss = { opened = null },
-            extras = rows.mapNotNull { it.category },
         )
     }
 
     tagging?.let { queue ->
-        CategorySheet(queue, onPick = { r, c -> viewModel.setCategory(r.key, c) }, onDismiss = { tagging = null }, extras = rows.mapNotNull { it.category })
+        CategorySheet(queue, onPick = { r, c, onlyThis -> viewModel.setCategory(r.key, c, onlyThis) }, onDismiss = { tagging = null })
     }
 
     val active = Filter.entries.filter { it.name in filters }
@@ -181,6 +188,16 @@ fun PaymentsScreen(onBack: () -> Unit, onOpenPayment: (String) -> Unit, viewMode
                     Spacer(Modifier.height(Spacing.cardGap))
                 }
             }
+            if (shown.any { it.aiPicked || it.fairlySure }) {
+                item {
+                    Text(
+                        "✦ means AI picked it. Tap any payment to see why or change.",
+                        style = AppType.chip,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = Spacing.section, bottom = 8.dp),
+                    )
+                }
+            }
         }
 
         if (untagged.isNotEmpty()) {
@@ -193,11 +210,11 @@ fun PaymentsScreen(onBack: () -> Unit, onOpenPayment: (String) -> Unit, viewMode
                     .background(Bg)
                     .padding(start = Spacing.screen, end = Spacing.screen, top = 8.dp, bottom = 16.dp)
                     .fillMaxWidth()
-                    .heightIn(min = Spacing.scanButton)
+                    .heightIn(min = Spacing.button)
                     .clip(PillShape)
                     .background(Accent)
                     .clickable(role = Role.Button) { tagging = untagged }
-                    .padding(vertical = 18.dp),
+                    .padding(vertical = 14.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
@@ -220,7 +237,7 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(PillShape).background(Surface).padding(horizontal = 16.dp),
     ) {
-        Icon(Icons.Filled.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
             if (value.isEmpty()) Text("Search name, category or amount", style = AppType.body, color = TextSecondary)
@@ -235,7 +252,7 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
         }
         if (value.isNotEmpty()) {
             Icon(
-                Icons.Filled.Close,
+                com.yourteam.expensetracker.ui.theme.HugeIcons.Close,
                 contentDescription = "Clear search",
                 tint = TextSecondary,
                 modifier = Modifier.size(32.dp).clip(PillShape).clickable { onChange("") }.padding(6.dp),

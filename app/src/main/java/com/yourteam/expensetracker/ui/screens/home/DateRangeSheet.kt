@@ -17,10 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -142,7 +138,7 @@ fun DateRangeSheet(
                     onClick = { close() },
                     modifier = Modifier.size(Spacing.circle).clip(PillShape).background(SurfaceRaised),
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextPrimary)
+                    Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.Close, contentDescription = "Close", tint = TextPrimary)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -176,7 +172,7 @@ fun DateRangeSheet(
                 // ‹ November 2026 ›
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { month = month.minusMonths(1) }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month", tint = TextPrimary)
+                        Icon(com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronLeft, contentDescription = "Previous month", tint = TextPrimary)
                     }
                     Text(
                         text = monthTitle.format(month),
@@ -188,7 +184,7 @@ fun DateRangeSheet(
                     val canGoForward = month < thisMonth // no future spending to show
                     IconButton(onClick = { month = month.plusMonths(1) }, enabled = canGoForward) {
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            com.yourteam.expensetracker.ui.theme.HugeIcons.ChevronRight,
                             contentDescription = "Next month",
                             tint = if (canGoForward) TextPrimary else Faded,
                         )
@@ -354,7 +350,7 @@ private fun SheetPill(label: String, fill: Color, text: Color, modifier: Modifie
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .height(52.dp)
+            .height(Spacing.button)
             .clip(PillShape)
             .background(fill)
             .clickable(role = Role.Button, onClick = onClick),

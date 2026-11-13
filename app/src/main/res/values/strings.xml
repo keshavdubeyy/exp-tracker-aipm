@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Expense Tracker</string>
-    <string name="gpay_accessibility_description">Reads only Google Pay\'s \"payment successful\" screen, so small payments that get no bank SMS still show up. It ignores every other app, and nothing leaves your phone.</string>
+    <string name="gpay_accessibility_description">Reads only PhonePe, Navi and Paytm: the amount and payee on the UPI PIN screen, so it can ask whether the payment went through. It never reads your PIN, does not read Google Pay or any other app, and nothing leaves your phone.</string>
+    <string name="scan_pay_short">Scan &amp; Pay</string>
+    <string name="scan_pay_long">Scan a UPI QR and pay</string>
 </resources>

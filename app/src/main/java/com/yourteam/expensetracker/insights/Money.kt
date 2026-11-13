@@ -26,6 +26,9 @@ object Money {
         return "\u2212₹$whole" + if (fraction == 0L) "" else ".${fraction.toString().padStart(2, '0')}"
     }
 
+    /** For a UPI payment link ("am"): 4050 -> "40.50". No grouping, no symbol. */
+    fun plainAmount(paise: Long): String = "${paise / 100}.${(paise % 100).toString().padStart(2, '0')}"
+
     /** An amount with no sign, as on a payment row: "₹86", "₹1,240", "₹12.50" (paise only when not whole). */
     fun formatAmount(paise: Long): String = formatDebit(paise).removePrefix("\u2212")
 
@@ -39,6 +42,9 @@ object Money {
         val abs = kotlin.math.abs(tenths)
         return "$sign${abs / 10}.${abs % 10}%"
     }
+
+    /** Indian grouping for a plain digit string, as typed in an amount field: "2500000" -> "25,00,000". */
+    fun groupDigits(digits: String): String = groupIndian(digits)
 
     private fun groupIndian(digits: String): String {
         if (digits.length <= 3) return digits

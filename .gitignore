@@ -16,3 +16,6 @@ captures/
 *.sms
 sms-export*
 real-sms*
+
+# Tester metrics database (server/metrics.py): stays on the server
+*.db

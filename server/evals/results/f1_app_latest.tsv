@@ -1,0 +1,31 @@
+case	ai_sent	app_outcome	filed	shown_first	basis	score	expected_top1	critical
+CAT-001	yes	filed on its own	Food & Dining	Food & Dining	AI	0.75	Food & Dining	
+CAT-002	yes	filed on its own	Travel	Travel	AI	0.75	Travel	
+CAT-003	yes	filed on its own	Groceries	Groceries	SHOP_WORDS	0.90	Groceries	
+CAT-004	yes	filed on its own	Entertainment	Entertainment	AI	0.75	Entertainment	
+CAT-005	yes	filed on its own	Healthcare	Healthcare	SHOP_WORDS	0.95	Healthcare	
+CAT-006	yes	filed on its own	Groceries	Groceries	SHOP_WORDS	0.90	Groceries	filed on its own where the user must confirm
+CAT-007	yes	filed on its own	Others		AI	0.20	ABSTAIN	filed a category on an abstain case
+CAT-008	yes	filed on its own	Others	Others	AI	0.50	ABSTAIN	filed a category on an abstain case
+CAT-009	yes	filed on its own	Groceries	Groceries	AI	0.75	Groceries	filed on its own where the user must confirm
+CAT-010	yes	filed on its own	Groceries		AI	0.20	Groceries	filed on its own where the user must confirm
+CAT-011	yes	filed on its own	Shopping	Shopping	AI	0.75	Shopping	filed on its own where the user must confirm
+CAT-012	yes	filed on its own	Others		AI	0.20	ABSTAIN	filed a category on an abstain case
+CAT-013	yes	filed on its own	Food & Dining		AI	0.20	Food & Dining	filed on its own where the user must confirm
+CAT-014	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-015	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-016	yes	filed on its own	Others		AI	0.20	ABSTAIN	filed a category on an abstain case
+CAT-017	yes	filed on its own	Others		AI	0.20	ABSTAIN	filed a category on an abstain case
+CAT-018	yes	filed on its own	Groceries	Groceries	AI	0.75	Shopping	filed on its own where the user must confirm
+CAT-019	yes	filed on its own	Shopping		AI	0.20	ABSTAIN	filed a category on an abstain case
+CAT-020	yes	filed on its own	Rent	Rent	SHOP_WORDS	0.90	ABSTAIN	filed a category on an abstain case
+CAT-021	yes	filed on its own	Education	Education	SHOP_WORDS	0.95	Education	
+CAT-022	yes	filed on its own	Personal Care	Personal Care	SHOP_WORDS	0.95	Personal Care	
+CAT-023	no	asked, no guess			NONE	0.00	ABSTAIN	
+CAT-024	yes	filed on its own	Food & Dining	Food & Dining	SHOP_WORDS	0.95	Food & Dining	
+CAT-025	yes	filed on its own	Others		AI	0.20	ABSTAIN	filed a category on an abstain case
+
+auto_assigned	22	precision	59%
+abstain_cases_not_filed	27%	asked_with_no_guess	82%
+suggest_cases_first_shown_right	93%	in_first_3	100%
+critical_failures	14	CAT-006: filed on its own where the user must confirm; CAT-007: filed a category on an abstain case; CAT-008: filed a category on an abstain case; CAT-009: filed on its own where the user must confirm; CAT-010: filed on its own where the user must confirm; CAT-011: filed on its own where the user must confirm; CAT-012: filed a category on an abstain case; CAT-013: filed on its own where the user must confirm; CAT-016: filed a category on an abstain case; CAT-017: filed a category on an abstain case; CAT-018: filed on its own where the user must confirm; CAT-019: filed a category on an abstain case; CAT-020: filed a category on an abstain case; CAT-025: filed a category on an abstain case

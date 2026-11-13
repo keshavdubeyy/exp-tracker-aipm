@@ -93,6 +93,9 @@ object Spending {
      */
     fun counts(p: Payment): Boolean = !p.needsAnswer
 
+    /** All-time total spent across [payments], in whole rupees (rounded down), for the team dashboard's "Tracked so far". */
+    fun trackedRupees(payments: List<Payment>): Long = payments.filter(::counts).sumOf { it.paise } / 100
+
     /** Bar heights for a chart: each day as a share (0..1) of the biggest day. */
     fun barFractions(days: List<DayTotal>): List<Float> {
         val max = days.maxOfOrNull { it.totalPaise } ?: 0L

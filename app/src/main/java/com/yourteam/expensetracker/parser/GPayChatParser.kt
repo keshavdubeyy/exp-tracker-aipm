@@ -19,8 +19,13 @@ data class GPayChatPayment(
  * GPay's success screen is an animation with no readable text, but the chat it returns to
  * lists each payment as one line, e.g. "Payment to Ramesh ₹1 Paid · 5:24 pm" or
  * "Payment to Ramesh ₹20 Paid · 7 Nov". This reads those lines.
+ * Money *received* in the same chat reads "Payment to you ₹301 Paid"; those are skipped, since
+ * they aren't spending (the bank's credit SMS records them as Received).
  */
 object GPayChatParser {
+
+    /** True for "Payment to you …": money that came in, not money spent. */
+    fun isToYou(payee: String): Boolean = payee.trim().equals("you", ignoreCase = true)
 
     private val lineRegex = Regex(
         """^\s*payment to\s+(.+?)\s+₹\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s+paid\b(.*)$""",
@@ -41,6 +46,7 @@ object GPayChatParser {
         return texts.mapNotNull { text ->
             val m = lineRegex.find(text) ?: return@mapNotNull null
             val payee = m.groupValues[1].trim()
+            if (isToYou(payee)) return@mapNotNull null
             val amount = m.groupValues[2]
             val rest = m.groupValues[3]
 

@@ -29,6 +29,8 @@ sealed interface ReviewUiState {
         val conflicts: List<PaymentRowModel>,
         /** Category names already in use, for the Add category sheet. */
         val categories: List<String>,
+        /** Needs Review (Feature 1 §3.8): payments with no category yet. Still counted in every total. Newest first. */
+        val untagged: List<PaymentRowModel> = emptyList(),
     ) : ReviewUiState {
         val rows get() = pending + conflicts
     }
@@ -48,10 +50,11 @@ class ReviewViewModel(app: Application) : AndroidViewModel(app) {
             pending = snap.payments.filter { it.needsAnswer }.map { paymentRow(it, snap) },
             conflicts = snap.payments.filter { it.conflict }.map { paymentRow(it, snap) },
             categories = snap.payments.mapNotNull(snap::categoryOf).distinct(),
+            untagged = snap.payments.filter { !it.needsAnswer && !it.conflict && snap.categoryOf(it) == null }.map { paymentRow(it, snap) },
         )
     }
 
     fun answer(id: Long, yes: Boolean) = PaymentActions.answer(repo, id, yes)
 
-    fun setCategory(key: String, category: String) = PaymentActions.categorise(repo, key, category)
+    fun setCategory(key: String, category: String, onlyThis: Boolean = false) = PaymentActions.categorise(repo, key, category, onlyThis)
 }

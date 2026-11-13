@@ -17,13 +17,37 @@ data class StartedPayment(
     val at: Long,
     val answer: UserAnswer,
     val manual: Boolean = false,
-)
+    /** UPI app it was started in ("GPay", "PhonePe"), or [CASH] for cash typed in by hand. */
+    val app: String = "GPay",
+) {
+    /** Cash never shows up in a bank SMS or app, so it is never paired with one. */
+    val cash: Boolean get() = app == CASH
 
-/** A "Payment to X ₹N Paid" line read from a GPay chat. */
-data class ChatLine(val key: String, val paise: Long, val payee: String, val at: Long)
+    companion object {
+        const val CASH = "Cash"
+    }
+}
+
+/**
+ * A record from a payment app that money left: a "Payment to X ₹N Paid" line read from a GPay
+ * chat, or a "Paid ₹N to X" notification from any payment app. [source] is shown as the record
+ * ("GPay chat", "PhonePe alert").
+ */
+data class ChatLine(val key: String, val paise: Long, val payee: String, val at: Long, val source: String = "GPay chat")
 
 /** A bank debit SMS. */
-data class BankDebit(val smsId: Long, val paise: Long, val at: Long, val sender: String)
+data class BankDebit(
+    val smsId: Long,
+    val paise: Long,
+    val at: Long,
+    val sender: String,
+    /** Who was paid, as written in the SMS ("Chai Point", "shop@upi"); null if not named. */
+    val payee: String? = null,
+    /** The payee's UPI ID if the SMS shows one. */
+    val vpa: String? = null,
+    /** "UPI", "IMPS", "Card", … if the SMS says. */
+    val method: String? = null,
+)
 
 /**
  * One real-world payment, with whatever evidence we have for it. Each piece of evidence
@@ -61,7 +85,7 @@ object Reconciler {
         debits: List<BankDebit>,
     ): List<Payment> {
         // 1. Started payment <-> GPay chat line.
-        val startedToChat = pairUp(started, chats, { it.paise }, { it.at }, { it.paise }, { it.at })
+        val startedToChat = pairUp(started.filterNot { it.cash }, chats, { it.paise }, { it.at }, { it.paise }, { it.at })
         val groups = started.map { s ->
             Payment(paise = s.paise, payee = s.payee, at = s.at, started = s, chat = startedToChat[s])
         } + chats.filter { it !in startedToChat.values }.map { c ->
@@ -69,10 +93,10 @@ object Reconciler {
         }
 
         // 2. Each group <-> bank debit SMS.
-        val groupToSms = pairUp(groups, debits, { it.paise }, { it.at }, { it.paise }, { it.at })
-        val withSms = groups.map { g -> groupToSms[g]?.let { g.copy(sms = it) } ?: g }
+        val groupToSms = pairUp(groups.filterNot { it.started?.cash == true }, debits, { it.paise }, { it.at }, { it.paise }, { it.at })
+        val withSms = groups.map { g -> groupToSms[g]?.let { g.copy(sms = it, payee = g.payee ?: it.payee) } ?: g }
         val smsOnly = debits.filter { it !in groupToSms.values }.map { d ->
-            Payment(paise = d.paise, payee = null, at = d.at, sms = d)
+            Payment(paise = d.paise, payee = d.payee, at = d.at, sms = d)
         }
 
         return (withSms + smsOnly)
