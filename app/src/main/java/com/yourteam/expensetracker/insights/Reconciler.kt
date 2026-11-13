@@ -99,9 +99,42 @@ object Reconciler {
             Payment(paise = d.paise, payee = d.payee, at = d.at, sms = d)
         }
 
-        return (withSms + smsOnly)
+        val all = (withSms + smsOnly)
             .filterNot { it.started?.answer == UserAnswer.NO && it.chat == null && it.sms == null }
-            .sortedByDescending { it.at }
+        return dropDuplicates(all).sortedByDescending { it.at }
+    }
+
+    /** A retry: a PIN screen seen (and answered "Yes") this close to the real payment is the same payment. */
+    const val RETRY_MS = 10 * 60_000L
+    /** Payment apps re-post the same "Paid ₹N to X" alert within about a minute. */
+    const val REPOST_MS = 60_000L
+
+    /**
+     * The same payment recorded twice, removed so it's counted once:
+     *  1. A payment only seen as a PIN screen and answered "Yes" (no bank SMS, no app alert) for the same amount and payee as a
+     *     payment a bank SMS or app alert confirmed, within [RETRY_MS]: an earlier or later attempt of it.
+     *  2. Two app alerts from the same app for the same amount and payee within [REPOST_MS]: a re-post.
+     * Payments typed in by hand and cash are never removed.
+     */
+    fun dropDuplicates(payments: List<Payment>): List<Payment> {
+        fun samePayee(a: Payment, b: Payment) =
+            a.payee != null && b.payee != null && a.payee.trim().equals(b.payee.trim(), ignoreCase = true)
+        val confirmed = payments.filter { it.chat != null || it.sms != null }
+        val retries = payments.filter { p ->
+            val s = p.started ?: return@filter false
+            s.answer == UserAnswer.YES && !s.manual && !s.cash && p.chat == null && p.sms == null && confirmed.any { q ->
+                q.paise == p.paise && samePayee(p, q) && abs(q.at - p.at) <= RETRY_MS
+            }
+        }.toSet()
+        val alertsOnly = payments.filter { it.chat != null && it.sms == null && it.started == null }.sortedBy { it.at }
+        val reposts = HashSet<Payment>()
+        alertsOnly.forEachIndexed { i, a ->
+            if (a in reposts) return@forEachIndexed
+            alertsOnly.drop(i + 1).takeWhile { it.at - a.at <= REPOST_MS }
+                .filter { it !in reposts && it.paise == a.paise && it.chat!!.source == a.chat!!.source && samePayee(a, it) }
+                .forEach { reposts += it }
+        }
+        return payments.filterNot { it in retries || it in reposts }
     }
 
     /** Greedy one-to-one pairing: same amount, within the time window, closest in time first. */
