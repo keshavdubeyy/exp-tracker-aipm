@@ -59,6 +59,15 @@ class InsightWordingCheckTest {
         assertEquals(emptyList<String>(), InsightWordingCheck.problems(repeat, "Swiggy, 30 times", "Your most frequent place, ₹7,500 in 1–13 Nov."))
     }
 
+    // Golden INS-004: "Food led category spending" broadens "highest among listed categories".
+    @Test fun titleKeepsTheInsightsQualifier() {
+        val top = change.copy(pattern = "Food is highest among listed categories", metrics = linkedMapOf("food_spend_inr" to 5000L))
+        val detail = "Food was ₹5,000, the highest of the listed categories in 1–13 Nov."
+        assertTrue("ranking" in InsightWordingCheck.problems(top, "Food led category spending", detail).joinToString())
+        assertTrue("qualifier" in InsightWordingCheck.problems(top, "Food is highest", detail).joinToString())
+        assertEquals(emptyList<String>(), InsightWordingCheck.problems(top, "Food highest among listed categories", detail))
+    }
+
     @Test fun signsAndIndianGroupingAreReadAsTheSameNumber() {
         val down = change.copy(metrics = linkedMapOf("total_inr" to 125000L, "change_percent" to -40))
         assertEquals(emptyList<String>(), InsightWordingCheck.problems(down, "Spending down 40%", "₹1,25,000 in 1–13 Nov, 40% less."))

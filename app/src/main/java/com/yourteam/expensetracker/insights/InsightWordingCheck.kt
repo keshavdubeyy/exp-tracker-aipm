@@ -20,7 +20,10 @@ object InsightWordingCheck {
     )
 
     /** Allowed only when the app's own insight makes that ranking (golden INS-004: "top" without a full ranking). */
-    private val RANKING = Regex("""\b(top|highest|largest|biggest|most|least|lowest|smallest|leading)\b""", RegexOption.IGNORE_CASE)
+    private val RANKING = Regex("""\b(top|tops|topped|highest|largest|biggest|most|least|lowest|smallest|leading|led|leads)\b""", RegexOption.IGNORE_CASE)
+
+    /** A ranking limited by the insight ("among the listed categories") must stay limited in the title (golden INS-004). */
+    private val QUALIFIER = Regex("""\blisted\b""", RegexOption.IGNORE_CASE)
 
     fun numbers(text: String): List<Double> =
         NUMBER.findAll(text).mapNotNull { it.value.replace(",", "").toDoubleOrNull() }.toList()
@@ -47,6 +50,8 @@ object InsightWordingCheck {
         if (BANNED.containsMatchIn(text)) out += "cause, prediction or advice words"
         val made = RANKING.findAll(f.pattern).map { it.value.lowercase() }.toSet()
         if (RANKING.findAll(text).any { it.value.lowercase() !in made }) out += "ranking claim the insight doesn't make"
+        else if (QUALIFIER.containsMatchIn(f.pattern) && RANKING.containsMatchIn(title) && !QUALIFIER.containsMatchIn(title))
+            out += "title drops the insight's qualifier"
         if (title.length > TITLE_MAX || detail.length > TEXT_MAX) out += "too long"
         return out
     }
